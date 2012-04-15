@@ -7,13 +7,51 @@ from PIL import Image, ImageTk
 class Interface:
   """The class for the GUI interface"""
   
-  viewWidth = 800 #width of the view canvas
-  viewHeight = 400 #height of the view canvas
+  mu0      = 1.2566370614e-6    #Vacuum permeability
+  epsilon0 = 8.854187817620e-12 # Vacuum permittivity
+  c        = 1/(mu0*epsilon0)**0.5
+  
+  Nx = 800 #width of simulation and view canvas
+  Ny = 400 #height of simulation and view canvas
+  barrierX = 100 #x position of the barrier
+  
+  d  = 2.0/Nx
+  dt = d/c/2**0.5
+  
+  NEZx = Nx #Ez at x endpoints
+  NEZy = Ny #Ez at y endpoints
+  #range updated by Yee algorithm:
+  EZx_range = slice(barrierX+2, NEZx-2) #right end is RBC and left side is explicitly calculated, so not updated using Yee algorithm
+  EZy_range = slice(1, NEZy-2) #top and bottom are RBCs, so not updated using Yee algorithm
+  #range updated by explicit formula:
+  EZx_ex_range = slice(0, barrierX+1)
+  EZy_ex_range = slice(0, NEZy-1)
+  
+  NHXx = Nx     #Hx at x endpoints
+  NHXy = Ny - 1 #Hx not at y endpoints, so -1
+  HXx_range = slice(0, NHXx-1) #all positions updated using Yee
+  HXy_range = slice(0, NHXy-1)
+
+  NHYx = Nx - 1 #Hy not at x endpoints, so -1
+  NHYy = Ny     #Hy at y endpoints
+  HYx_range = slice(0, NHYx-1) #all y positions updated using Yee
+  HYy_range = slice(0, NHYy-1) 
+  
   minFreq = 1
   maxFreq = 37
-  barrierX = 100
 
-  def __init__(self):    
+  def __init__(self):
+#for the simulation
+    self.t = 0 #will hold the current time
+    self.cont = False #the simulation isn't currently running
+    self.Ez = np.zeros((self.Nx, self.Ny))
+    
+    #for testing only
+    self.lamb = 20*self.d
+    self.k = 2*np.pi/self.lamb
+    self.omega = 2*np.pi*self.c/self.lamb
+    self.tau = self.lamb/self.c
+    
 #The root window
     self.root = Tkinter.Tk()
     self.root.title("Leon's Olde Interference & Diffraction Simulator")
@@ -46,7 +84,7 @@ class Interface:
     self.viewFrame = ttk.Labelframe(self.root, text='View')
     self.viewFrame.grid(column=0,row=0,sticky='nsew',padx=5,pady=5)
     
-    self.canvas = Tkinter.Canvas(self.viewFrame, width=self.viewWidth, height=self.viewHeight)
+    self.canvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
     self.canvas.grid(column=1, row=0, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)    
     
 #The barrier frame frame and intial barrier setup
@@ -63,8 +101,8 @@ class Interface:
     self.simFrame.grid(column=0,row=1,columnspan=2,sticky='nsew',padx=5,pady=5)
     
     #buttons to control the simulation
-    ttk.Button(self.simFrame, text='Run', command=lambda: self.start()).grid(column=0, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
-    ttk.Button(self.simFrame, text='Stop', command=lambda: self.stop()).grid(column=1, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
+    ttk.Button(self.simFrame, text='Run', command=lambda: self.start()).grid(column=0, row=0,sticky='nsew', padx=5, pady=5)
+    ttk.Button(self.simFrame, text='Stop', command=lambda: self.stop()).grid(column=1, row=0,sticky='nsew', padx=5, pady=5)
     ttk.Button(self.simFrame, text='Reset').grid(column=2, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
 
     #label to show the current frequency
@@ -91,7 +129,8 @@ class Interface:
     #1)the only floats Image.fromstring can handle are 32bit, so need to do that conversion
     #2)0 (and below) are black, 255 and above are white, shades of gray inbetween
     #3)need to store array in (height, width) format
-    data = np.float32(np.random.rand(200, 400))*255
+    #data = np.float32(np.random.rand(200, 400))*255
+    data = np.float32((np.transpose(self.Ez)+1)/2*256)
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     self.ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
   
@@ -111,9 +150,18 @@ class Interface:
 	if i < (len(self.gaps)-1):
 	  self.canvas.create_line([(self.barrierX,self.gaps[i][1]),(self.barrierX,self.gaps[i+1][0])], width=1, fill='red')    
     #draw the last part
-    self.canvas.create_line([(self.barrierX,self.gaps[-1][1]),(self.barrierX,self.viewHeight)], width=1, fill='red')    
-    
+    self.canvas.create_line([(self.barrierX,self.gaps[-1][1]),(self.barrierX,self.Ny)], width=1, fill='red')    
+  
+  def reset():
+    pass
+    #todo: enable frequency slider
+    #todo: set t=0
+    #todo: clear the canvas
+  
   def start(self):
+    #todo: reset if it's never been run before
+    #todo: don't do anything if it's already running
+    #todo: disable frequency slider
     self.cont = True
     self.run()
     
@@ -122,13 +170,19 @@ class Interface:
     
   def run(self):
     if self.cont:
-      #todo: step simulation
+      self.step()
       self.redrawCanvas()
-      self.root.after(1000,self.run) #todo: adjust time  
+      self.root.after(100,self.run) #todo: adjust time  
   
-  
-  
-  
+  def step(self):
+    #x and y for
+    x, y = self.d * np.mgrid[self.EZx_ex_range, self.EZy_ex_range]
+    tr = self.t - x/self.c
+    #want wave to start gradually and propigate at speed of light
+    #logistic growth makes it come in gradually and use of retarded time there and in step function at end enforces propigation
+    self.Ez[self.EZx_ex_range, self.EZy_ex_range] = np.sin(self.k*x-self.omega*self.t)/(1+np.exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
+    #todo: force Ez on barriers to be zero
+    self.t = self.t + self.dt
   
   
   
