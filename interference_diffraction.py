@@ -142,15 +142,12 @@ class Interface:
     self.canvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)    
     
     #next, draw the barrier
-    #draw the first part
-    self.canvas.create_line([(self.barrierX,0),(self.barrierX,self.gaps[0][0])], width=1, fill='red')
-    #draw intermediate parts
-    if len(self.gaps) > 1:
-      for i in range(len(self.gaps)):
-	if i < (len(self.gaps)-1):
-	  self.canvas.create_line([(self.barrierX,self.gaps[i][1]),(self.barrierX,self.gaps[i+1][0])], width=1, fill='red')    
-    #draw the last part
-    self.canvas.create_line([(self.barrierX,self.gaps[-1][1]),(self.barrierX,self.Ny)], width=1, fill='red')    
+    invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
+    invGaps.insert(0,0) #put zero for the first item
+    invGaps.append(self.Ny) #put Ny for the last item
+    #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
+    for i in range(0,len(invGaps),2):
+      self.canvas.create_line([(self.barrierX,invGaps[i]),(self.barrierX,invGaps[i+1])], width=1, fill='red')    
   
   def reset():
     pass
@@ -175,13 +172,23 @@ class Interface:
       self.root.after(100,self.run) #todo: adjust time  
   
   def step(self):
-    #x and y for
+    #first, handle area from the barrier left
+    #x and y for points on the barrier and to the left
     x, y = self.d * np.mgrid[self.EZx_ex_range, self.EZy_ex_range]
     tr = self.t - x/self.c
     #want wave to start gradually and propigate at speed of light
     #logistic growth makes it come in gradually and use of retarded time there and in step function at end enforces propigation
     self.Ez[self.EZx_ex_range, self.EZy_ex_range] = np.sin(self.k*x-self.omega*self.t)/(1+np.exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
-    #todo: force Ez on barriers to be zero
+
+    #now, enforce Ez=0 on barrier
+    invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
+    invGaps.insert(0,0) #put zero for the first item
+    invGaps.append(self.Ny) #put Ny for the last item
+    #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
+    for i in range(0,len(invGaps),2):
+      self.Ez[self.barrierX, invGaps[i]:invGaps[i+1]] = 0     
+    
+    
     self.t = self.t + self.dt
   
   
