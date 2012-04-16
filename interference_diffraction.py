@@ -47,7 +47,7 @@ class Interface:
 #for the simulation
     self.t = 0 #will hold the current time
     self.cont = False #the simulation isn't currently running
-    self.Ez = np.zeros((self.NEZx, self.NEZy,20)) #3rd dimension to keep track of past values of Ez. todo: change it's number to make appropriate to find Ez_rms
+    self.Ez = np.zeros((self.NEZx, self.NEZy,28)) #3rd dimension to keep track of past values of Ez. todo: change it's number to make appropriate to find Ez_rms
     self.Hx = np.zeros((self.NHXx, self.NHXy))
     self.Hy = np.zeros((self.NHYx, self.NHYy))
     
@@ -56,6 +56,8 @@ class Interface:
     self.k = 2*np.pi/self.lamb
     self.omega = 2*np.pi*self.c/self.lamb
     self.tau = self.lamb/self.c
+    
+    print str(self.tau/self.dt)
     
 #The root window
     self.root = Tkinter.Tk()
@@ -134,17 +136,21 @@ class Interface:
     #1)the only floats Image.fromstring can handle are 32bit, so need to do that conversion
     #2)0 (and below) are black, 255 and above are white, shades of gray inbetween
     #3)need to store array in (height, width) format
-    #data = np.float32(np.random.rand(200, 400))*255
     data = np.float32((np.transpose(self.Ez[:,:,0])+1)/2*256)
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     self.ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
-  
+    
+  def updateEzRMSPlot(self):
+    data = np.float32(np.transpose(np.sqrt(np.sum(np.square(self.Ez),axis=2)/28)))*256*(2**0.5) #RMS of Ez
+    im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
+    self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
+    
   def redrawCanvas(self):
     #first, clear everything off the canvas (but don't delete the canvas itself)
     self.canvas.delete('all')
     
     self.updateEzPlot()
-    self.canvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)    
+    self.canvas.create_image(0,0,image=self.ezRMSPlot,anchor=Tkinter.NW)    
     
     #next, draw the barrier
     invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
@@ -213,7 +219,7 @@ class Interface:
     rng   = slice(1,self.NEZy-1) #range of everything in y except the corners
     rngp1 = slice(2,self.NEZy)
     rngm1 = slice(0,self.NEZy-2)
-    self.Ez[self.NEZx-1,rng,0]  = -self.Ez[self.NEZx-2,rng,2] + Ma*(self.Ez[self.NEZx-2,rng,0] + self.Ez[self.NEZx-1,rng,2]) + Mb*(self.Ez[self.NEZx-1,rng,1] + self.Ez[self.NEZx-2,rng,1]) + Mc*(self.Ez[self.NEZx-1,rngp1,1] - 2*self.Ez[self.NEZx-1,rng,1] + self.Ez[self.NEZx-1,rngm1,1] + self.Ez[self.NEZx-2,rngp1,1] - 2*self.Ez[self.NEZx-2,rng,1] + self.Ez[self.NEZx-2,rngm1,1])
+    self.Ez[-1,rng,0]  = -self.Ez[-2,rng,2] + Ma*(self.Ez[-2,rng,0] + self.Ez[-1,rng,2]) + Mb*(self.Ez[-1,rng,1] + self.Ez[-2,rng,1]) + Mc*(self.Ez[-1,rngp1,1] - 2*self.Ez[-1,rng,1] + self.Ez[-1,rngm1,1] + self.Ez[-2,rngp1,1] - 2*self.Ez[-2,rng,1] + self.Ez[-2,rngm1,1])
 
     #for y=0
     rng = slice(self.barrierX+2,self.NEZx-1) #range of everything in x except the corners
@@ -222,11 +228,11 @@ class Interface:
     self.Ez[rng,0,0]  = -self.Ez[rng,1,2] + Ma*(self.Ez[rng,1,0] + self.Ez[rng,0,2]) + Mb*(self.Ez[rng,0,1] + self.Ez[rng,1,1]) + Mc*(self.Ez[rngp1,0,1] - 2*self.Ez[rng,0,1] + self.Ez[rngm1,0,1] + self.Ez[rngp1,1,1] - 2*self.Ez[rng,1,1] + self.Ez[rngm1,1,1])
 
     #for y=NEZy
-    self.Ez[rng,self.NEZy-1,0]  = -self.Ez[rng,self.NEZy-2,2] + Ma*(self.Ez[rng,self.NEZy-2,0] + self.Ez[rng,self.NEZy-1,2]) + Mb*(self.Ez[rng,self.NEZy-1,1] + self.Ez[rng,self.NEZy-2,1]) + Mc*(self.Ez[rngp1,self.NEZy-1,1] - 2*self.Ez[rng,self.NEZy-1,1] + self.Ez[rngm1,self.NEZy-1,1] + self.Ez[rngp1,self.NEZy-2,1] - 2*self.Ez[rng,self.NEZy-2,1] + self.Ez[rngm1,self.NEZy-2,1])
+    self.Ez[rng,-1,0]  = -self.Ez[rng,-2,2] + Ma*(self.Ez[rng,-2,0] + self.Ez[rng,-1,2]) + Mb*(self.Ez[rng,-1,1] + self.Ez[rng,-2,1]) + Mc*(self.Ez[rngp1,-1,1] - 2*self.Ez[rng,-1,1] + self.Ez[rngm1,-1,1] + self.Ez[rngp1,-2,1] - 2*self.Ez[rng,-2,1] + self.Ez[rngm1,-2,1])
 
     #now for the corners
-    self.Ez[self.NEZx-1,0,0] = self.Ez[self.NEZx-2,1,2] #bottom right
-    self.Ez[self.NEZx-1,self.NEZy-1,0] = self.Ez[self.NEZx-2,self.NEZy-2,2] #top right
+    self.Ez[-1,0,0] = self.Ez[-2,1,2] #bottom right
+    self.Ez[-1,-1,0] = self.Ez[-2,-2,2] #top right
     
     ##finially, update the time and the sources todo: don't have to update the sources twice?
     self.t = self.t + self.dt
