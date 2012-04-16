@@ -18,10 +18,13 @@ class Interface:
   d  = 2.0/Nx
   dt = d/c/2**0.5
   
+  Db = dt/mu0/d
+  Cb = dt/epsilon0/d
+  
   NEZx = Nx #Ez at x endpoints
   NEZy = Ny #Ez at y endpoints
   #range updated by Yee algorithm:
-  EZx_range = slice(barrierX+2, NEZx-2) #right end is RBC and left side is explicitly calculated, so not updated using Yee algorithm
+  EZx_range = slice(barrierX+1, NEZx-2) #right end is RBC and left side is explicitly calculated, so not updated using Yee algorithm
   EZy_range = slice(1, NEZy-2) #top and bottom are RBCs, so not updated using Yee algorithm
   #range updated by explicit formula:
   EZx_ex_range = slice(0, barrierX+1)
@@ -44,7 +47,9 @@ class Interface:
 #for the simulation
     self.t = 0 #will hold the current time
     self.cont = False #the simulation isn't currently running
-    self.Ez = np.zeros((self.Nx, self.Ny))
+    self.Ez = np.zeros((self.NEZx, self.NEZy))
+    self.Hx = np.zeros((self.NHXx, self.NHXy))
+    self.Hy = np.zeros((self.NHYx, self.NHYy))
     
     #for testing only
     self.lamb = 20*self.d
@@ -169,10 +174,10 @@ class Interface:
     if self.cont:
       self.step()
       self.redrawCanvas()
-      self.root.after(100,self.run) #todo: adjust time  
+      self.root.after(1,self.run) #todo: adjust time???
   
   def step(self):
-    #first, handle area from the barrier left
+    #first, handle the Ez source -- area from the barrier left
     #x and y for points on the barrier and to the left
     x, y = self.d * np.mgrid[self.EZx_ex_range, self.EZy_ex_range]
     tr = self.t - x/self.c
@@ -188,6 +193,15 @@ class Interface:
     for i in range(0,len(invGaps),2):
       self.Ez[self.barrierX, invGaps[i]:invGaps[i+1]] = 0     
     
+    
+    #next, take care of Hx and Hy using the standard Yee algorithm
+    self.Hx[self.HXx_range, self.HXy_range] = self.Hx[self.HXx_range, self.HXy_range] + self.Db*(self.Ez[self.HXx_range, self.HXy_range] - self.Ez[self.HXx_range, 1:self.NHXy]); #HXy_range+1
+    self.Hy[self.HYx_range, self.HYy_range] = self.Hy[self.HYx_range, self.HYy_range] + self.Db*(self.Ez[1:self.NHYx, self.HYy_range] - self.Ez[self.HYx_range, self.HYy_range]); #HYx_range+1
+    
+    #do the normal Yee updates on Ez in the relevant range
+    print str(self.Hy[self.barrierX+1:110,225])
+    print str(self.Hx[self.barrierX+1,225])
+    self.Ez[self.EZx_range, self.EZy_range] = self.Ez[self.EZx_range, self.EZy_range] + self.Cb*(self.Hy[self.EZx_range, self.EZy_range] - self.Hy[self.barrierX:(self.NEZx-3),self.EZy_range] + self.Hx[self.EZx_range, 0:self.NEZy-3] - self.Hx[self.EZx_range, self.EZy_range]);
     
     self.t = self.t + self.dt
   
