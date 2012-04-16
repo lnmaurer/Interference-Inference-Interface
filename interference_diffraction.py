@@ -24,21 +24,21 @@ class Interface:
   NEZx = Nx #Ez at x endpoints
   NEZy = Ny #Ez at y endpoints
   #range updated by Yee algorithm:
-  EZx_range = slice(barrierX+1, NEZx-2) #right end is RBC and left side is explicitly calculated, so not updated using Yee algorithm
-  EZy_range = slice(1, NEZy-2) #top and bottom are RBCs, so not updated using Yee algorithm
+  EZx_range = slice(barrierX+1, NEZx-1) #right end is RBC and left side is explicitly calculated, so not updated using Yee algorithm
+  EZy_range = slice(1, NEZy-1) #top and bottom are RBCs, so not updated using Yee algorithm
   #range updated by explicit formula:
   EZx_ex_range = slice(0, barrierX+1)
-  EZy_ex_range = slice(0, NEZy-1)
+  EZy_ex_range = slice(0, NEZy)
   
   NHXx = Nx     #Hx at x endpoints
   NHXy = Ny - 1 #Hx not at y endpoints, so -1
-  HXx_range = slice(0, NHXx-1) #all positions updated using Yee
-  HXy_range = slice(0, NHXy-1)
+  HXx_range = slice(0, NHXx) #all positions updated using Yee
+  HXy_range = slice(0, NHXy)
 
   NHYx = Nx - 1 #Hy not at x endpoints, so -1
   NHYy = Ny     #Hy at y endpoints
-  HYx_range = slice(0, NHYx-1) #all y positions updated using Yee
-  HYy_range = slice(0, NHYy-1) 
+  HYx_range = slice(0, NHYx) #all y positions updated using Yee
+  HYy_range = slice(0, NHYy) 
   
   minFreq = 1
   maxFreq = 37
@@ -47,7 +47,7 @@ class Interface:
 #for the simulation
     self.t = 0 #will hold the current time
     self.cont = False #the simulation isn't currently running
-    self.Ez = np.zeros((self.NEZx, self.NEZy))
+    self.Ez = np.zeros((self.NEZx, self.NEZy,10)) #3rd dimension to keep track of past values of Ez. todo: change it's number to make appropriate to find Ez_rms
     self.Hx = np.zeros((self.NHXx, self.NHXy))
     self.Hy = np.zeros((self.NHYx, self.NHYy))
     
@@ -135,7 +135,7 @@ class Interface:
     #2)0 (and below) are black, 255 and above are white, shades of gray inbetween
     #3)need to store array in (height, width) format
     #data = np.float32(np.random.rand(200, 400))*255
-    data = np.float32((np.transpose(self.Ez)+1)/2*256)
+    data = np.float32((np.transpose(self.Ez[:,:,0])+1)/2*256)
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     self.ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
   
@@ -183,7 +183,7 @@ class Interface:
     tr = self.t - x/self.c
     #want wave to start gradually and propigate at speed of light
     #logistic growth makes it come in gradually and use of retarded time there and in step function at end enforces propigation
-    self.Ez[self.EZx_ex_range, self.EZy_ex_range] = np.sin(self.k*x-self.omega*self.t)/(1+np.exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
+    self.Ez[self.EZx_ex_range, self.EZy_ex_range, 0] = np.sin(self.k*x-self.omega*self.t)/(1+np.exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
 
     #now, enforce Ez=0 on barrier
     invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
@@ -191,19 +191,46 @@ class Interface:
     invGaps.append(self.Ny) #put Ny for the last item
     #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
     for i in range(0,len(invGaps),2):
-      self.Ez[self.barrierX, invGaps[i]:invGaps[i+1]] = 0     
+      self.Ez[self.barrierX, invGaps[i]:invGaps[i+1], 0] = 0     
     
     
     #next, take care of Hx and Hy using the standard Yee algorithm
-    self.Hx[self.HXx_range, self.HXy_range] = self.Hx[self.HXx_range, self.HXy_range] + self.Db*(self.Ez[self.HXx_range, self.HXy_range] - self.Ez[self.HXx_range, 1:self.NHXy]); #HXy_range+1
-    self.Hy[self.HYx_range, self.HYy_range] = self.Hy[self.HYx_range, self.HYy_range] + self.Db*(self.Ez[1:self.NHYx, self.HYy_range] - self.Ez[self.HYx_range, self.HYy_range]); #HYx_range+1
+    self.Hx[self.HXx_range, self.HXy_range] = self.Hx[self.HXx_range, self.HXy_range] + self.Db*(self.Ez[self.HXx_range, self.HXy_range, 0] - self.Ez[self.HXx_range, 1:(self.NHXy+1), 0]) #HXy_range+1
+    self.Hy[self.HYx_range, self.HYy_range] = self.Hy[self.HYx_range, self.HYy_range] + self.Db*(self.Ez[1:(self.NHYx+1), self.HYy_range, 0] - self.Ez[self.HYx_range, self.HYy_range, 0]) #HYx_range+1
+    
+    #move old Ez back in the array
+    self.Ez = np.roll(self.Ez,1,axis=2)
     
     #do the normal Yee updates on Ez in the relevant range
-    print str(self.Hy[self.barrierX+1:110,225])
-    print str(self.Hx[self.barrierX+1,225])
-    self.Ez[self.EZx_range, self.EZy_range] = self.Ez[self.EZx_range, self.EZy_range] + self.Cb*(self.Hy[self.EZx_range, self.EZy_range] - self.Hy[self.barrierX:(self.NEZx-3),self.EZy_range] + self.Hx[self.EZx_range, 0:self.NEZy-3] - self.Hx[self.EZx_range, self.EZy_range]);
+    self.Ez[self.EZx_range, self.EZy_range, 0] = self.Ez[self.EZx_range, self.EZy_range, 1] + self.Cb*(self.Hy[self.EZx_range, self.EZy_range] - self.Hy[self.barrierX:(self.NEZx-2),self.EZy_range] + self.Hx[self.EZx_range, 0:self.NEZy-2] - self.Hx[self.EZx_range, self.EZy_range])
     
+    
+    ##now take care of the Mur RBCs
+    Ma = (self.c*self.dt - self.d)/(self.c*self.dt + self.d)
+    Mb = 2*self.d/(self.c*self.dt + self.d)
+    Mc = (self.c*self.dt)**2/2/self.d/(self.c*self.dt + self.d)
+    ##for x=NEZx-1
+    rng   = slice(1,self.NEZy-1) #range of everything in y except the corners
+    rngp1 = slice(2,self.NEZy)
+    rngm1 = slice(0,self.NEZy-2)
+    self.Ez[self.NEZx-1,rng,0]  = -self.Ez[self.NEZx-2,rng,2] + Ma*(self.Ez[self.NEZx-2,rng,0] + self.Ez[self.NEZx-1,rng,2]) + Mb*(self.Ez[self.NEZx-1,rng,1] + self.Ez[self.NEZx-2,rng,1]) + Mc*(self.Ez[self.NEZx-1,rngp1,1] - 2*self.Ez[self.NEZx-1,rng,1] + self.Ez[self.NEZx-1,rngm1,1] + self.Ez[self.NEZx-2,rngp1,1] - 2*self.Ez[self.NEZx-2,rng,1] + self.Ez[self.NEZx-2,rngm1,1])
+
+    #for y=0
+    #rng = slice(barrierX+2,NEZx-2) #range of everything in x except the corners
+    #Ez(rng,1)  = -Ez2(rng,2) + Ma*(Ez(rng,2) + Ez2(rng,1)) + Mb*(Ez1(rng,1) + Ez1(rng,2)) + Mc*(Ez1(rng+1,1) - 2*Ez1(rng,1) + Ez1(rng-1,1) + Ez1(rng+1,2) - 2*Ez1(rng,2) + Ez1(rng-1,2))
+
+  #%for y=NEZy
+  #Ez(rng,NEZy)  = -Ez2(rng,NEZy-1) + Ma*(Ez(rng,NEZy-1) + Ez2(rng,NEZy)) + Mb*(Ez1(rng,NEZy) + Ez1(rng,NEZy-1)) + Mc*(Ez1(rng+1,NEZy) - 2*Ez1(rng,NEZy) + Ez1(rng-1,NEZy) + Ez1(rng+1,NEZy-1) - 2*Ez1(rng,NEZy-1) + Ez1(rng-1,NEZy-1))
+
+  #%now for the corners
+  #Ez(1,1)       = Ez2(2,2) %bottom left
+  #Ez(1,NEZy)    = Ez2(2,NEZy-1) %top left
+  #Ez(NEZx,1)    = Ez2(NEZx-1,2) %bottom right
+  #Ez(NEZx,NEZy) = Ez2(NEZx-1,NEZy-1) %top right
+    
+    ##finially, update the time and the sources todo: don't have to update the sources twice?
     self.t = self.t + self.dt
+    self.Ez[self.EZx_ex_range, self.EZy_ex_range, 0] = np.sin(self.k*x-self.omega*self.t)/(1+np.exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
   
   
   
