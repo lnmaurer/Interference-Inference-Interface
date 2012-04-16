@@ -47,7 +47,7 @@ class Interface:
 #for the simulation
     self.t = 0 #will hold the current time
     self.cont = False #the simulation isn't currently running
-    self.Ez = np.zeros((self.NEZx, self.NEZy,10)) #3rd dimension to keep track of past values of Ez. todo: change it's number to make appropriate to find Ez_rms
+    self.Ez = np.zeros((self.NEZx, self.NEZy,20)) #3rd dimension to keep track of past values of Ez. todo: change it's number to make appropriate to find Ez_rms
     self.Hx = np.zeros((self.NHXx, self.NHXy))
     self.Hy = np.zeros((self.NHYx, self.NHYy))
     
@@ -216,17 +216,17 @@ class Interface:
     self.Ez[self.NEZx-1,rng,0]  = -self.Ez[self.NEZx-2,rng,2] + Ma*(self.Ez[self.NEZx-2,rng,0] + self.Ez[self.NEZx-1,rng,2]) + Mb*(self.Ez[self.NEZx-1,rng,1] + self.Ez[self.NEZx-2,rng,1]) + Mc*(self.Ez[self.NEZx-1,rngp1,1] - 2*self.Ez[self.NEZx-1,rng,1] + self.Ez[self.NEZx-1,rngm1,1] + self.Ez[self.NEZx-2,rngp1,1] - 2*self.Ez[self.NEZx-2,rng,1] + self.Ez[self.NEZx-2,rngm1,1])
 
     #for y=0
-    #rng = slice(barrierX+2,NEZx-2) #range of everything in x except the corners
-    #Ez(rng,1)  = -Ez2(rng,2) + Ma*(Ez(rng,2) + Ez2(rng,1)) + Mb*(Ez1(rng,1) + Ez1(rng,2)) + Mc*(Ez1(rng+1,1) - 2*Ez1(rng,1) + Ez1(rng-1,1) + Ez1(rng+1,2) - 2*Ez1(rng,2) + Ez1(rng-1,2))
+    rng = slice(self.barrierX+2,self.NEZx-1) #range of everything in x except the corners
+    rngp1 = slice(self.barrierX+3,self.NEZx)
+    rngm1 = slice(self.barrierX+1,self.NEZx-2)
+    self.Ez[rng,0,0]  = -self.Ez[rng,1,2] + Ma*(self.Ez[rng,1,0] + self.Ez[rng,0,2]) + Mb*(self.Ez[rng,0,1] + self.Ez[rng,1,1]) + Mc*(self.Ez[rngp1,0,1] - 2*self.Ez[rng,0,1] + self.Ez[rngm1,0,1] + self.Ez[rngp1,1,1] - 2*self.Ez[rng,1,1] + self.Ez[rngm1,1,1])
 
-  #%for y=NEZy
-  #Ez(rng,NEZy)  = -Ez2(rng,NEZy-1) + Ma*(Ez(rng,NEZy-1) + Ez2(rng,NEZy)) + Mb*(Ez1(rng,NEZy) + Ez1(rng,NEZy-1)) + Mc*(Ez1(rng+1,NEZy) - 2*Ez1(rng,NEZy) + Ez1(rng-1,NEZy) + Ez1(rng+1,NEZy-1) - 2*Ez1(rng,NEZy-1) + Ez1(rng-1,NEZy-1))
+    #for y=NEZy
+    self.Ez[rng,self.NEZy-1,0]  = -self.Ez[rng,self.NEZy-2,2] + Ma*(self.Ez[rng,self.NEZy-2,0] + self.Ez[rng,self.NEZy-1,2]) + Mb*(self.Ez[rng,self.NEZy-1,1] + self.Ez[rng,self.NEZy-2,1]) + Mc*(self.Ez[rngp1,self.NEZy-1,1] - 2*self.Ez[rng,self.NEZy-1,1] + self.Ez[rngm1,self.NEZy-1,1] + self.Ez[rngp1,self.NEZy-2,1] - 2*self.Ez[rng,self.NEZy-2,1] + self.Ez[rngm1,self.NEZy-2,1])
 
-  #%now for the corners
-  #Ez(1,1)       = Ez2(2,2) %bottom left
-  #Ez(1,NEZy)    = Ez2(2,NEZy-1) %top left
-  #Ez(NEZx,1)    = Ez2(NEZx-1,2) %bottom right
-  #Ez(NEZx,NEZy) = Ez2(NEZx-1,NEZy-1) %top right
+    #now for the corners
+    self.Ez[self.NEZx-1,0,0] = self.Ez[self.NEZx-2,1,2] #bottom right
+    self.Ez[self.NEZx-1,self.NEZy-1,0] = self.Ez[self.NEZx-2,self.NEZy-2,2] #top right
     
     ##finially, update the time and the sources todo: don't have to update the sources twice?
     self.t = self.t + self.dt
