@@ -205,10 +205,20 @@ class Interface:
       
     #now, draw the horizontal slice
     lineID = self.Ezcanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='blue', dash='-') 
-    #self.Ezcanvas.tag_bind(lineID, "<Button-1>",  lambda: pass) #todo: update command
+    self.Ezcanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
     lineID = self.EzRMScanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='green', dash='-')
-    #self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  lambda: pass) #todo: update command
-   
+    self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
+      
+  def horizClickMethod(self, eventObj):
+    self.Ezcanvas.bind('<B1-Motion>', self.horizDragMethod)
+    self.EzRMScanvas.bind('<B1-Motion>', self.horizDragMethod)
+    
+  def horizDragMethod(self, eventObj):
+    if (eventObj.y >= 0) and (eventObj.y < self.Ny):
+      self.sliceY = eventObj.y
+      if not self.cont:
+	self.redrawCanvases()
+    
   def resetIntensity(self):
     self.EzSQ = zeros((self.NEZx, self.NEZy))
       
