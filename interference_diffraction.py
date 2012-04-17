@@ -4,7 +4,7 @@ import tkMessageBox
 import time
 #import numpy as np
 from numpy import *
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 
 class Interface:
   """The class for the GUI interface"""
@@ -16,6 +16,8 @@ class Interface:
   Nx = 600 #width of simulation and view canvas
   Ny = 300 #height of simulation and view canvas
   barrierX = 100 #x position of the barrier
+  
+  plotD = 100 #dimension of plot
   
   d  = 2.0/Nx
   dt = d/c/2**0.5
@@ -60,8 +62,6 @@ class Interface:
     self.omega = 2*pi*self.c/self.lamb
     self.tau = self.lamb/self.c
     
-    print str(self.tau/self.dt)
-    
 #The root window
     self.root = Tkinter.Tk()
     self.root.title("Leon's Olde Interference & Diffraction Simulator")
@@ -97,8 +97,13 @@ class Interface:
     self.Ezcanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
     self.Ezcanvas.grid(column=0, row=0, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)    
 
+    self.HorizPlotCanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.plotD)
+    self.HorizPlotCanvas.grid(column=0, row=3, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)      
+    
+    self.sliceY = 60 #position of horizontal slice todo: put in middle, set to 60 for testing
+    
     self.EzRMScanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
-    self.EzRMScanvas.grid(column=0, row=3, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)        
+    self.EzRMScanvas.grid(column=0, row=6, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)        
     
 #The barrier frame frame and intial barrier setup
     self.barrierFrame = ttk.Labelframe(self.root, text='Barrier')
@@ -116,19 +121,20 @@ class Interface:
     #buttons to control the simulation
     ttk.Button(self.simFrame, text='Run', command=lambda: self.start()).grid(column=0, row=0,sticky='nsew', padx=5, pady=5)
     ttk.Button(self.simFrame, text='Stop', command=lambda: self.stop()).grid(column=1, row=0,sticky='nsew', padx=5, pady=5)
-    ttk.Button(self.simFrame, text='Reset').grid(column=2, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
-
+    ttk.Button(self.simFrame, text='Reset Simulation').grid(column=2, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
+    ttk.Button(self.simFrame, text='Reset Intensity Averaging', command=lambda: self.resetIntensity()).grid(column=3, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
+    
     #label to show the current frequency
     freqLabel = ttk.Label(self.simFrame, text="Frequency = ")
-    freqLabel.grid(column=4, row=1,sticky='nsw', padx=5, pady=5)
+    freqLabel.grid(column=5, row=1,sticky='nsw', padx=5, pady=5)
     #slider to set the frequency
-    ttk.Label(self.simFrame, text="Min").grid(column=3, row=0,sticky='nsw', padx=5, pady=5) #todo: give value for min
+    ttk.Label(self.simFrame, text="Min").grid(column=4, row=0,sticky='nsw', padx=5, pady=5) #todo: give value for min
     freqScale = ttk.Scale(self.simFrame, orient=Tkinter.HORIZONTAL, from_=self.minFreq, to=self.maxFreq) #todo: units, disable when simulation is running
     #command to update frequency label when slider is changed
     def setFreqLabel(arg=None):
       freqLabel.config(text = "Frequency = " + str(int(freqScale.get())))
     freqScale.config(command = setFreqLabel)
-    freqScale.grid(column=4, row=0,sticky='nsew', padx=5, pady=5)
+    freqScale.grid(column=5, row=0,sticky='nsew', padx=5, pady=5)
     ttk.Label(self.simFrame, text="Max").grid(column=5, row=0,sticky='nsw', padx=5, pady=5) #todo: give value for min
     #give initial frequency value
     setFreqLabel() #todo: not working; starts at zero
@@ -153,14 +159,32 @@ class Interface:
       data = float32(transpose(abs(self.EzDTF)))
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
-    
+  
+  def updateHorizPlotCanvas(self):
+    im = Image.new('RGB', (self.Nx,self.plotD))
+    draw = ImageDraw.Draw(im)
+    for x in range(0,self.Nx):
+      #draw for Ez
+      y = int((-self.Ez[x,self.sliceY,0]+1)*50)
+      draw.point((x,y), fill="red")
+      #draw for EzRMS
+      if self.EzDTF[1,1] == 0:
+	y = 0
+      else:
+	y = int((1-abs(self.EzDTF[x,self.sliceY]/self.EzDTF[1,1])**2)*100)
+      draw.point((x,y), fill="green")      
+    self.horizPlot = ImageTk.PhotoImage(image=im)
+  
   def redrawCanvases(self):
     #first, clear everything off the canvases (but don't delete the canvases themselves)
     self.Ezcanvas.delete('all')
+    self.HorizPlotCanvas.delete('all')
     self.EzRMScanvas.delete('all')
     
     self.updateEzPlot()
-    self.Ezcanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)      
+    self.Ezcanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
+    self.updateHorizPlotCanvas()
+    self.HorizPlotCanvas.create_image(0,0,image=self.horizPlot,anchor=Tkinter.NW)  
     self.updateEzRMSPlot()
     self.EzRMScanvas.create_image(0,0,image=self.ezRMSPlot,anchor=Tkinter.NW)    
     
@@ -171,10 +195,18 @@ class Interface:
     #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
     for i in range(0,len(invGaps),2):
       self.Ezcanvas.create_line([(self.barrierX,invGaps[i]),(self.barrierX,invGaps[i+1])], width=1, fill='red')    
-      self.EzRMScanvas.create_line([(self.barrierX,invGaps[i]),(self.barrierX,invGaps[i+1])], width=1, fill='red')    
-
+      self.EzRMScanvas.create_line([(self.barrierX,invGaps[i]),(self.barrierX,invGaps[i+1])], width=1, fill='red')
       
-  def reset():
+    #now, draw the horizontal slice
+    lineID = self.Ezcanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='blue', dash='-') 
+    #self.Ezcanvas.tag_bind(lineID, "<Button-1>",  lambda: pass) #todo: update command
+    lineID = self.EzRMScanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='green', dash='-')
+    #self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  lambda: pass) #todo: update command
+   
+  def resetIntensity(self):
+    self.EzDTF = zeros((self.NEZx, self.NEZy))
+      
+  def reset(self):
     pass
     #todo: enable frequency slider
     #todo: set t=0
