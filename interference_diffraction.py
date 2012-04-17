@@ -4,6 +4,7 @@ import tkMessageBox
 import time
 #import numpy as np
 from numpy import *
+import numpy
 from PIL import Image, ImageTk, ImageDraw
 
 class Interface:
@@ -52,9 +53,10 @@ class Interface:
     self.t = 0 #will hold the current time
     self.cont = False #the simulation isn't currently running
     self.Ez = zeros((self.NEZx, self.NEZy,3)) #3rd dimension to keep track of past values of Ez.
-    self.EzDTF = zeros((self.NEZx, self.NEZy))
+    self.EzSQ = zeros((self.NEZx, self.NEZy))
     self.Hx = zeros((self.NHXx, self.NHXy))
     self.Hy = zeros((self.NHYx, self.NHYy))
+    self.maxY = 1 #contains the largest Ez seen
     
     #for testing only
     self.lamb = 20*self.d
@@ -148,15 +150,12 @@ class Interface:
     #1)the only floats Image.fromstring can handle are 32bit, so need to do that conversion
     #2)0 (and below) are black, 255 and above are white, shades of gray inbetween
     #3)need to store array in (height, width) format
-    data = float32((transpose(self.Ez[:,:,0])+1)/2*256)
+    data = float32((transpose(self.Ez[:,:,0])/self.maxY+1)/2*256)
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     self.ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
     
   def updateEzRMSPlot(self):
-    if self.EzDTF[0,0] != 0.0:
-      data = 256*(float32(transpose(square(abs(self.EzDTF))))/abs(self.EzDTF[0,0])**2)
-    else: #the data is zero, so just display it
-      data = float32(transpose(abs(self.EzDTF)))
+    data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
   
@@ -165,13 +164,10 @@ class Interface:
     draw = ImageDraw.Draw(im)
     for x in range(0,self.Nx):
       #draw for Ez
-      y = int((-self.Ez[x,self.sliceY,0]+1)*50)
+      y = int((-self.Ez[x,self.sliceY,0]/self.maxY+1)*50)
       draw.point((x,y), fill="red")
       #draw for EzRMS
-      if self.EzDTF[1,1] == 0:
-	y = 0
-      else:
-	y = int((1-abs(self.EzDTF[x,self.sliceY]/self.EzDTF[1,1])**2)*100)
+      y = int((1-self.EzRMS[x,self.sliceY]/self.maxRMSY)*99)
       draw.point((x,y), fill="green")      
     self.horizPlot = ImageTk.PhotoImage(image=im)
   
@@ -180,6 +176,16 @@ class Interface:
     self.Ezcanvas.delete('all')
     self.HorizPlotCanvas.delete('all')
     self.EzRMScanvas.delete('all')
+    
+    self.EzRMS = sqrt(self.EzSQ)
+    self.maxRMSY = numpy.max(self.EzRMS)
+    if self.maxRMSY == 0:
+      self.maxRMSY = 1
+      
+    tempMaxY = numpy.max(abs(self.Ez))
+    if tempMaxY > self.maxY:
+      self.maxY = tempMaxY
+    print self.maxY
     
     self.updateEzPlot()
     self.Ezcanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
@@ -204,7 +210,7 @@ class Interface:
     #self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  lambda: pass) #todo: update command
    
   def resetIntensity(self):
-    self.EzDTF = zeros((self.NEZx, self.NEZy))
+    self.EzSQ = zeros((self.NEZx, self.NEZy))
       
   def reset(self):
     pass
@@ -294,7 +300,7 @@ class Interface:
     
     #strictly speaking, the following will blow up to infinity if you integrate forever (since the FT of a sinusoid is a delta function)
     #however, we're not that patient. plus, floating point limitations will prevent it (once the numbers are large enough, adding a small number to them won't change them)
-    self.EzDTF = self.EzDTF + Ez[:,:,0]*(cos(self.omega*self.t) + 1j*sin(self.omega*self.t))
+    self.EzSQ = self.EzSQ + square(Ez[:,:,0])
     self.Ez = Ez
     self.Hx = Hx
     self.Hy = Hy  
