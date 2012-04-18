@@ -104,7 +104,12 @@ class Interface:
     self.Ezcanvas.grid(column=0, row=0, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)    
 
     self.HorizPlotCanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.plotD)
-    self.HorizPlotCanvas.grid(column=0, row=3, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)      
+    self.HorizPlotCanvas.grid(column=0, row=3, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)
+    
+    self.VertPlotCanvas1 = Tkinter.Canvas(self.viewFrame, width=self.plotD, height=self.Ny)
+    self.VertPlotCanvas1.grid(column=3, row=0, columnspan=1, rowspan=3, sticky='nsew', padx=5, pady=5)
+    self.VertPlotCanvas2 = Tkinter.Canvas(self.viewFrame, width=self.plotD, height=self.Ny)
+    self.VertPlotCanvas2.grid(column=3, row=6, columnspan=1, rowspan=3, sticky='nsew', padx=5, pady=5)
     
     self.sliceY = 60 #position of horizontal slice todo: put in middle, set to 60 for testing
     self.sliceX = self.Nx/2
@@ -179,8 +184,7 @@ class Interface:
       draw.text((self.Nx/3, self.Ny/3), str(count), font=self.font, fill=255.0)
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
     
-  
-  def updateHorizPlotCanvas(self):
+  def updateHorizPlot(self):
     im = Image.new('RGB', (self.Nx,self.plotD))
     draw = ImageDraw.Draw(im)
     for x in range(0,self.Nx):
@@ -191,7 +195,20 @@ class Interface:
       y = int((1-self.EzRMS[x,self.sliceY]/self.maxRMSY)*99)
       draw.point((x,y), fill="green")      
     self.horizPlot = ImageTk.PhotoImage(image=im)
+
+  def updateVertPlot(self):
+    im = Image.new('RGB', (self.plotD, self.Ny))
+    draw = ImageDraw.Draw(im)
+    for y in range(0,self.Ny):
+      #draw for Ez
+      x = int((self.Ez[self.sliceX,y,0]/self.maxY+1)*50)
+      draw.point((x,y), fill="yellow")
+      #draw for EzRMS
+      x = int((self.EzRMS[self.sliceX,y]/self.maxRMSY)*99)
+      draw.point((x,y), fill="green")      
+    self.vertPlot = ImageTk.PhotoImage(image=im)  
   
+    
   def redrawCanvases(self):
     #first, clear everything off the canvases (but don't delete the canvases themselves)
     self.Ezcanvas.delete('all')
@@ -206,14 +223,18 @@ class Interface:
     tempMaxY = numpy.max(abs(self.Ez))
     if tempMaxY > self.maxY:
       self.maxY = tempMaxY
-    print self.maxY
+    #print self.maxY
     
     self.updateEzPlot()
     self.Ezcanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
-    self.updateHorizPlotCanvas()
+    self.updateHorizPlot()
     self.HorizPlotCanvas.create_image(0,0,image=self.horizPlot,anchor=Tkinter.NW)  
     self.updateEzRMSPlot()
-    self.EzRMScanvas.create_image(0,0,image=self.ezRMSPlot,anchor=Tkinter.NW)    
+    self.EzRMScanvas.create_image(0,0,image=self.ezRMSPlot,anchor=Tkinter.NW)
+    self.HorizPlotCanvas.create_image(0,0,image=self.horizPlot,anchor=Tkinter.NW)  
+    self.updateVertPlot()
+    self.VertPlotCanvas1.create_image(0,0,image=self.vertPlot,anchor=Tkinter.NW)  
+    self.VertPlotCanvas2.create_image(0,0,image=self.vertPlot,anchor=Tkinter.NW)  
     
     #next, draw the barrier
     invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
@@ -228,7 +249,11 @@ class Interface:
     lineID = self.Ezcanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='yellow', dash='-') 
     self.Ezcanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
     lineID = self.EzRMScanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='green', dash='-')
-    self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
+    self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)    
+    lineID = self.VertPlotCanvas1.create_line([(0,self.sliceY),(self.plotD,self.sliceY)], width=1, fill='blue', dash='-')
+    self.VertPlotCanvas1.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
+    lineID = self.VertPlotCanvas2.create_line([(0,self.sliceY),(self.plotD,self.sliceY)], width=1, fill='blue', dash='-')
+    self.VertPlotCanvas2.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)    
     
     #the vertical slice
     lineID = self.Ezcanvas.create_line([(self.sliceX,0),(self.sliceX,self.Ny)], width=1, fill='yellow', dash='-') 
@@ -241,6 +266,8 @@ class Interface:
   def horizClickMethod(self, eventObj):
     self.Ezcanvas.bind('<B1-Motion>', self.horizDragMethod)
     self.EzRMScanvas.bind('<B1-Motion>', self.horizDragMethod)
+    self.VertPlotCanvas1.bind('<B1-Motion>', self.horizDragMethod)
+    self.VertPlotCanvas2.bind('<B1-Motion>', self.horizDragMethod)
     
   def horizDragMethod(self, eventObj):
     if (eventObj.y >= 0) and (eventObj.y < self.Ny):
