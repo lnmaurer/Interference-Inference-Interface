@@ -2,10 +2,11 @@ import Tkinter, tkFileDialog
 import ttk
 import tkMessageBox
 import time
+import math
 #import numpy as np
 from numpy import *
 import numpy
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 class Interface:
   """The class for the GUI interface"""
@@ -57,12 +58,15 @@ class Interface:
     self.Hx = zeros((self.NHXx, self.NHXy))
     self.Hy = zeros((self.NHYx, self.NHYy))
     self.maxY = 1 #contains the largest Ez seen
+    self.haveRestartedAvg = False
     
     #for testing only
     self.lamb = 20*self.d
     self.k = 2*pi/self.lamb
     self.omega = 2*pi*self.c/self.lamb
     self.tau = self.lamb/self.c
+#misc
+    self.font = ImageFont.truetype("BebasNeue.otf", 90)
     
 #The root window
     self.root = Tkinter.Tk()
@@ -103,10 +107,17 @@ class Interface:
     self.HorizPlotCanvas.grid(column=0, row=3, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)      
     
     self.sliceY = 60 #position of horizontal slice todo: put in middle, set to 60 for testing
+    self.sliceX = self.Nx/2
     
     self.EzRMScanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
-    self.EzRMScanvas.grid(column=0, row=6, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)        
+    self.EzRMScanvas.grid(column=0, row=6, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)
     
+    #make it so that, after dragging an element has ceased, the binding is reset so that further dragging won't move the element unless it gets clicked again first
+    #we do this by binding to any motion on any canvas
+    self.Ezcanvas.bind("<Motion>", self.clearCanvasBindings)
+    self.HorizPlotCanvas.bind("<Motion>", self.clearCanvasBindings)
+    self.EzRMScanvas.bind("<Motion>", self.clearCanvasBindings)
+        
 #The barrier frame frame and intial barrier setup
     self.barrierFrame = ttk.Labelframe(self.root, text='Barrier')
     self.barrierFrame.grid(column=1,row=0,sticky='nsew',padx=5,pady=5)
@@ -143,6 +154,11 @@ class Interface:
   
   
     self.redrawCanvases();
+    
+  def clearCanvasBindings(self, eventObj):
+    self.Ezcanvas.bind("<B1-Motion>", lambda e: None)
+    self.HorizPlotCanvas.bind("<B1-Motion>", lambda e: None)
+    self.EzRMScanvas.bind("<B1-Motion>", lambda e: None)
   
   def updateEzPlot(self):
     #the numpy array; just for testing purposes
@@ -157,7 +173,12 @@ class Interface:
   def updateEzRMSPlot(self):
     data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
+    if self.t < 2.5/self.c and self.cont:
+      count = int(math.ceil((2.5/self.c - self.t)/self.dt))
+      draw = ImageDraw.Draw(im)
+      draw.text((self.Nx/3, self.Ny/3), str(count), font=self.font, fill=255.0)
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
+    
   
   def updateHorizPlotCanvas(self):
     im = Image.new('RGB', (self.Nx,self.plotD))
@@ -165,7 +186,7 @@ class Interface:
     for x in range(0,self.Nx):
       #draw for Ez
       y = int((-self.Ez[x,self.sliceY,0]/self.maxY+1)*50)
-      draw.point((x,y), fill="red")
+      draw.point((x,y), fill="yellow")
       #draw for EzRMS
       y = int((1-self.EzRMS[x,self.sliceY]/self.maxRMSY)*99)
       draw.point((x,y), fill="green")      
@@ -204,11 +225,19 @@ class Interface:
       self.EzRMScanvas.create_line([(self.barrierX,invGaps[i]),(self.barrierX,invGaps[i+1])], width=1, fill='red')
       
     #now, draw the horizontal slice
-    lineID = self.Ezcanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='blue', dash='-') 
+    lineID = self.Ezcanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='yellow', dash='-') 
     self.Ezcanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
     lineID = self.EzRMScanvas.create_line([(0,self.sliceY),(self.Nx,self.sliceY)], width=1, fill='green', dash='-')
     self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  self.horizClickMethod)
-      
+    
+    #the vertical slice
+    lineID = self.Ezcanvas.create_line([(self.sliceX,0),(self.sliceX,self.Ny)], width=1, fill='yellow', dash='-') 
+    self.Ezcanvas.tag_bind(lineID, "<Button-1>",  self.vertClickMethod)
+    lineID = self.EzRMScanvas.create_line([(self.sliceX,0),(self.sliceX,self.Ny)], width=1, fill='green', dash='-')
+    self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  self.vertClickMethod)
+    lineID = self.HorizPlotCanvas.create_line([(self.sliceX,0),(self.sliceX,self.plotD)], width=1, fill='blue', dash='-')
+    self.HorizPlotCanvas.tag_bind(lineID, "<Button-1>",  self.vertClickMethod)    
+    
   def horizClickMethod(self, eventObj):
     self.Ezcanvas.bind('<B1-Motion>', self.horizDragMethod)
     self.EzRMScanvas.bind('<B1-Motion>', self.horizDragMethod)
@@ -218,6 +247,17 @@ class Interface:
       self.sliceY = eventObj.y
       if not self.cont:
 	self.redrawCanvases()
+    
+  def vertClickMethod(self, eventObj):
+    self.Ezcanvas.bind('<B1-Motion>', self.vertDragMethod)
+    self.EzRMScanvas.bind('<B1-Motion>', self.vertDragMethod)
+    self.HorizPlotCanvas.bind('<B1-Motion>', self.vertDragMethod)
+    
+  def vertDragMethod(self, eventObj):
+    if (eventObj.x >= 0) and (eventObj.x < self.Nx):
+      self.sliceX = eventObj.x
+      if not self.cont:
+	self.redrawCanvases()    
     
   def resetIntensity(self):
     self.EzSQ = zeros((self.NEZx, self.NEZy))
@@ -242,6 +282,9 @@ class Interface:
   def run(self):
     if self.cont:
       t = time.clock()
+      if self.t > 2.5/self.c and not self.haveRestartedAvg:
+	self.resetIntensity()
+	self.haveRestartedAvg = True
       self.step()
       self.redrawCanvases()
       print str(time.clock()-t)
