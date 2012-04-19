@@ -52,6 +52,7 @@ class Interface:
   def __init__(self):
 #for the simulation
     self.t = 0 #will hold the current time
+    self.t_avg = 0 #hold the time since averaging started
     self.cont = False #the simulation isn't currently running
     self.Ez = zeros((self.NEZx, self.NEZy,3)) #3rd dimension to keep track of past values of Ez.
     self.EzSQ = zeros((self.NEZx, self.NEZy))
@@ -104,25 +105,42 @@ class Interface:
     self.Ezcanvas.grid(column=0, row=0, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)    
 
     self.HorizPlotCanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.plotD)
-    self.HorizPlotCanvas.grid(column=0, row=3, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)
+    self.HorizPlotCanvas.grid(column=0, row=3, columnspan=3, rowspan=5, sticky='nsew', padx=5, pady=5)
+    
+    self.xStringVar = Tkinter.StringVar()
+    self.yStringVar = Tkinter.StringVar()
+    self.tStringVar = Tkinter.StringVar()
+    self.EzStringVar = Tkinter.StringVar()
+    self.EzRMSStringVar = Tkinter.StringVar()
+    ttk.Label(self.viewFrame, textvariable=self.xStringVar).grid(column=3, row=3, sticky='nsew', padx=5, pady=0)
+    ttk.Label(self.viewFrame, textvariable=self.yStringVar).grid(column=3, row=4, sticky='nsew', padx=5, pady=0)
+    ttk.Label(self.viewFrame, textvariable=self.tStringVar).grid(column=3, row=5, sticky='nsew', padx=5, pady=0)    
+    ttk.Label(self.viewFrame, textvariable=self.EzStringVar).grid(column=3, row=6, sticky='nsew', padx=5, pady=0)    
+    ttk.Label(self.viewFrame, textvariable=self.EzRMSStringVar).grid(column=3, row=7, sticky='nsew', padx=5, pady=0)    
     
     self.VertPlotCanvas1 = Tkinter.Canvas(self.viewFrame, width=self.plotD, height=self.Ny)
     self.VertPlotCanvas1.grid(column=3, row=0, columnspan=1, rowspan=3, sticky='nsew', padx=5, pady=5)
     self.VertPlotCanvas2 = Tkinter.Canvas(self.viewFrame, width=self.plotD, height=self.Ny)
-    self.VertPlotCanvas2.grid(column=3, row=6, columnspan=1, rowspan=3, sticky='nsew', padx=5, pady=5)
+    self.VertPlotCanvas2.grid(column=3, row=8, columnspan=1, rowspan=3, sticky='nsew', padx=5, pady=5)
     
     self.sliceY = 60 #position of horizontal slice todo: put in middle, set to 60 for testing
     self.sliceX = self.Nx/2
     
     self.EzRMScanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
-    self.EzRMScanvas.grid(column=0, row=6, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)
-    
+    self.EzRMScanvas.grid(column=0, row=8, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)
+   
     #make it so that, after dragging an element has ceased, the binding is reset so that further dragging won't move the element unless it gets clicked again first
     #we do this by binding to any motion on any canvas
     self.Ezcanvas.bind("<Motion>", self.clearCanvasBindings)
     self.HorizPlotCanvas.bind("<Motion>", self.clearCanvasBindings)
     self.EzRMScanvas.bind("<Motion>", self.clearCanvasBindings)
-        
+    
+    #make the arrow keys control the slice positions
+    self.root.bind("<Up>", lambda arg: self.setSliceY(self.sliceY-1))
+    self.root.bind("<Down>", lambda arg: self.setSliceY(self.sliceY+1))
+    self.root.bind("<Right>", lambda arg: self.setSliceX(self.sliceX+1))
+    self.root.bind("<Left>", lambda arg: self.setSliceX(self.sliceX-1))
+    
 #The barrier frame frame and intial barrier setup
     self.barrierFrame = ttk.Labelframe(self.root, text='Barrier')
     self.barrierFrame.grid(column=1,row=0,sticky='nsew',padx=5,pady=5)
@@ -178,7 +196,7 @@ class Interface:
   def updateEzRMSPlot(self):
     data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
-    if self.t < 2.5/self.c and self.cont:
+    if self.t < 2.5/self.c and self.cont: #todo: clean up reset time
       count = int(math.ceil((2.5/self.c - self.t)/self.dt))
       draw = ImageDraw.Draw(im)
       draw.text((self.Nx/3, self.Ny/3), str(count), font=self.font, fill=255.0)
@@ -187,25 +205,25 @@ class Interface:
   def updateHorizPlot(self):
     im = Image.new('RGB', (self.Nx,self.plotD))
     draw = ImageDraw.Draw(im)
-    for x in range(0,self.Nx):
-      #draw for Ez
-      y = int((-self.Ez[x,self.sliceY,0]/self.maxY+1)*50)
-      draw.point((x,y), fill="yellow")
-      #draw for EzRMS
-      y = int((1-self.EzRMS[x,self.sliceY]/self.maxRMSY)*99)
-      draw.point((x,y), fill="green")      
+    x = range(0,self.Nx)
+    #plot EzRMS
+    y = int_(numpy.round((self.EzRMS[:,self.sliceY]*sqrt(2)/self.maxY+1)*50))
+    draw.line(zip(x,y), fill="green")
+    #plot Ez
+    y = int_(numpy.round((-self.Ez[:,self.sliceY,0]/self.maxY+1)*50))
+    draw.line(zip(x,y), fill="yellow")
     self.horizPlot = ImageTk.PhotoImage(image=im)
 
   def updateVertPlot(self):
     im = Image.new('RGB', (self.plotD, self.Ny))
     draw = ImageDraw.Draw(im)
-    for y in range(0,self.Ny):
-      #draw for Ez
-      x = int((self.Ez[self.sliceX,y,0]/self.maxY+1)*50)
-      draw.point((x,y), fill="yellow")
-      #draw for EzRMS
-      x = int((self.EzRMS[self.sliceX,y]/self.maxRMSY)*99)
-      draw.point((x,y), fill="green")      
+    y = range(0,self.Ny)
+    #plot EzRMS
+    x = int_(numpy.round((self.EzRMS[self.sliceX,:]/self.maxRMSY)*99))
+    draw.point(zip(x,y), fill="green")
+    #plot Ez
+    x = int_(numpy.round((self.Ez[self.sliceX,:,0]/self.maxY+1)*50))
+    draw.point(zip(x,y), fill="yellow")
     self.vertPlot = ImageTk.PhotoImage(image=im)  
   
     
@@ -215,7 +233,7 @@ class Interface:
     self.HorizPlotCanvas.delete('all')
     self.EzRMScanvas.delete('all')
     
-    self.EzRMS = sqrt(self.EzSQ)
+    self.EzRMS = sqrt(self.EzSQ/(self.t_avg+self.dt/1e6))
     self.maxRMSY = numpy.max(self.EzRMS)
     if self.maxRMSY == 0:
       self.maxRMSY = 1
@@ -261,7 +279,14 @@ class Interface:
     lineID = self.EzRMScanvas.create_line([(self.sliceX,0),(self.sliceX,self.Ny)], width=1, fill='green', dash='-')
     self.EzRMScanvas.tag_bind(lineID, "<Button-1>",  self.vertClickMethod)
     lineID = self.HorizPlotCanvas.create_line([(self.sliceX,0),(self.sliceX,self.plotD)], width=1, fill='blue', dash='-')
-    self.HorizPlotCanvas.tag_bind(lineID, "<Button-1>",  self.vertClickMethod)    
+    self.HorizPlotCanvas.tag_bind(lineID, "<Button-1>",  self.vertClickMethod)
+    
+    #finially, show the corridnates of the slices
+    self.xStringVar.set("x=" + str(self.sliceX) + "d")
+    self.yStringVar.set("y=" + str(self.sliceY) + "d")
+    self.tStringVar.set("t=" + str(int(self.t/self.dt)) + "dt")
+    self.EzStringVar.set("Ez={:+.4f}".format(self.Ez[self.sliceX,self.sliceY,0]))
+    self.EzRMSStringVar.set("EzRMS={:.4f}".format(self.EzRMS[self.sliceX,self.sliceY]))
     
   def horizClickMethod(self, eventObj):
     self.Ezcanvas.bind('<B1-Motion>', self.horizDragMethod)
@@ -270,8 +295,11 @@ class Interface:
     self.VertPlotCanvas2.bind('<B1-Motion>', self.horizDragMethod)
     
   def horizDragMethod(self, eventObj):
-    if (eventObj.y >= 0) and (eventObj.y < self.Ny):
-      self.sliceY = eventObj.y
+    self.setSliceY(eventObj.y)
+    
+  def setSliceY(self, y):
+    if (y >= 0) and (y < self.Ny):
+      self.sliceY = y
       if not self.cont:
 	self.redrawCanvases()
     
@@ -281,12 +309,16 @@ class Interface:
     self.HorizPlotCanvas.bind('<B1-Motion>', self.vertDragMethod)
     
   def vertDragMethod(self, eventObj):
-    if (eventObj.x >= 0) and (eventObj.x < self.Nx):
-      self.sliceX = eventObj.x
+    self.setSliceX(eventObj.x)
+    
+  def setSliceX(self, x):
+    if (x >= 0) and (x < self.Nx):
+      self.sliceX = x
       if not self.cont:
 	self.redrawCanvases()    
     
   def resetIntensity(self):
+    self.t_avg = 0
     self.EzSQ = zeros((self.NEZx, self.NEZy))
       
   def reset(self):
@@ -309,7 +341,7 @@ class Interface:
   def run(self):
     if self.cont:
       t = time.clock()
-      if self.t > 2.5/self.c and not self.haveRestartedAvg:
+      if self.t > 2.5/self.c and not self.haveRestartedAvg: #todo: clean up reset
 	self.resetIntensity()
 	self.haveRestartedAvg = True
       self.step()
@@ -376,11 +408,18 @@ class Interface:
     
     ##finially, update the time and the sources todo: don't have to update the sources twice?
     self.t = self.t + self.dt
+    self.t_avg = self.t_avg + self.dt
     Ez[self.EZx_ex_range, self.EZy_ex_range, 0] = sin(self.k*x-self.omega*self.t)/(1+exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
+    invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
+    invGaps.insert(0,0) #put zero for the first item
+    invGaps.append(self.Ny) #put Ny for the last item
+    #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
+    for i in range(0,len(invGaps),2):
+      Ez[self.barrierX, invGaps[i]:invGaps[i+1], 0] = 0  
     
     #strictly speaking, the following will blow up to infinity if you integrate forever (since the FT of a sinusoid is a delta function)
     #however, we're not that patient. plus, floating point limitations will prevent it (once the numbers are large enough, adding a small number to them won't change them)
-    self.EzSQ = self.EzSQ + square(Ez[:,:,0])
+    self.EzSQ = self.EzSQ + square(Ez[:,:,0])*self.dt
     self.Ez = Ez
     self.Hx = Hx
     self.Hy = Hy  
