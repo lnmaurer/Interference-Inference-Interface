@@ -296,54 +296,51 @@ class Interface:
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
   def applyAveraging(self, xS, yS, invert=False, othercoord=None):
-    if self.avgSetting.get() == 'amp':
+    if self.avgSetting.get() == 'amp': #want to display amplitude = EzRMS*sqrt(2) with zero in middle of plot
       v = int_(numpy.round((1+self.EzRMS[xS,yS]*sqrt(2)/self.maxY)*50))
       if othercoord != None: #in this case, let's plot +/-amplitude
 	othercoord.extend(othercoord[::-1]) #extend the coordinates so they're like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0]
 	v = concatenate((v,100-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
-    elif self.avgSetting.get() == 'rms':
+    elif self.avgSetting.get() == 'rms': #want to display EzRMS with zero at bottom of plot
       v = int_(numpy.round((self.EzRMS[xS,yS]/self.maxRMSY)*99))
-    else:
+    else: #want to display EzRMS^2 with zero at bottom of plot
       v = int_(numpy.round((self.EzSQ[xS,yS]/self.tAveraging/self.maxRMSY**2)*99))
     
-    if invert:
+    if invert: #mirror results across axis
       v = 100 - v
     return v
     
   def plot(self, draw, x, y, color):
-    if self.traceSetting.get() == 'line':
+    """Plots the data on the drawing in the given color"""
+    if self.traceSetting.get() == 'line': #line plot
       draw.line(zip(x,y), fill=color)
-    else:
+    else: #dot plot
       draw.point(zip(x,y), fill=color)
       
   def updateHorizPlot(self):
     im = Image.new('RGB', (self.Nx,self.plotD))
     draw = ImageDraw.Draw(im)
     x = range(0,self.Nx)
-    
     #plot EzRMS
     y = self.applyAveraging(self.EZx_all, self.sliceY, invert=True, othercoord=x)
     self.plot(draw, x, y, 'green')
-      
     #plot Ez
     y = int_(numpy.round((-self.Ez[:,self.sliceY,0]/self.maxY+1)*50))
     self.plot(draw, x, y, 'yellow')
-      
+    #turn plot in to a format the canvas can use
     self.horizPlot = ImageTk.PhotoImage(image=im)
 
   def updateVertPlot(self):
     im = Image.new('RGB', (self.plotD, self.Ny))
     draw = ImageDraw.Draw(im)
     y = range(0,self.Ny)
-    
     #plot EzRMS
     x = self.applyAveraging(self.sliceX, self.EZy_all, othercoord=y)
     self.plot(draw, x, y, 'green')
-      
     #plot Ez
     x = int_(numpy.round((self.Ez[self.sliceX,:,0]/self.maxY+1)*50))
     self.plot(draw, x, y, 'yellow')
-      
+    #turn plot in to a format the canvas can use  
     self.vertPlot = ImageTk.PhotoImage(image=im)  
   
     
@@ -484,7 +481,7 @@ class Interface:
       self.EzRMScanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
       self.step(avg=False)
       self.root.after(1,self.fastForwardStep)
-    else:
+    else: #stop fast forwarding
       self.fastForwarding = False
       self.resetIntensity()
       self.start()
