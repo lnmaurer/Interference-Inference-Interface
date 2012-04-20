@@ -176,10 +176,10 @@ class Interface:
 
     ttk.Button(self.barrierFrame, text='Add Opening', command=self.addOpening).grid(column=0, row=0, columnspan=2, sticky='nsew', padx=5, pady=5)
     ttk.Label(self.barrierFrame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
-    self.bottomEntry = ttk.Entry(self.barrierFrame, width=4) #todo: get validation working for tkEntry
+    self.bottomEntry = Tkinter.Spinbox(self.barrierFrame, width=4, from_=0, to=self.Nx)
     self.bottomEntry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
     ttk.Label(self.barrierFrame, text="Top:").grid(column=0, row=2, sticky='nes', padx=5, pady=5)
-    self.topEntry = ttk.Entry(self.barrierFrame, width=4) #todo: get validation working for tkEntry
+    self.topEntry = Tkinter.Spinbox(self.barrierFrame, width=4, from_=0, to=self.Nx)
     self.topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
     
     self.gaps = [[50,70],[230,250]]
@@ -222,22 +222,22 @@ class Interface:
       frame = ttk.Labelframe(self.barrierFrame, text="Opening {}".format(bn))
       frame.grid(column=0, row=r, columnspan=2, sticky='nesw', padx=5, pady=5)
       
-      top = Tkinter.StringVar()
-      bottom = Tkinter.StringVar()
+      top = Tkinter.IntVar()
+      bottom = Tkinter.IntVar()
       distance = Tkinter.StringVar(value=str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
       ttk.Label(frame, text="Top:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
-      entry = ttk.Entry(frame, width=4, textvariable=top)
       #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
+      entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=self.Nx, command=lambda n=bn, tv=top: self.updateBarrierTop(n,tv))
       entry.bind("<Return>",lambda arg, n=bn, tv=top: self.updateBarrierTop(n,tv))
       entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
       ttk.Label(frame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
-      entry = ttk.Entry(frame, width=4, textvariable=bottom)
+      entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=self.Nx, command=lambda n=bn, tv=bottom: self.updateBarrierBottom(n,tv))
       entry.bind("<Return>",lambda arg, n=bn, tv=bottom: self.updateBarrierBottom(n,tv))
       entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
       ttk.Label(frame, textvariable=distance).grid(column=0, row=2, sticky='nes', padx=5, pady=5)
       ttk.Button(frame, text='Remove', command=lambda n=bn: self.removeBarrier(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
-      top.set(str(gap[1]))     
-      bottom.set(str(gap[0]))
+      top.set(gap[1])
+      bottom.set(gap[0])
       self.strVars.append(top)
       self.strVars.append(bottom) 
       self.distances.append(distance)
@@ -245,21 +245,21 @@ class Interface:
       self.barrierFrames.append(frame)
       r = r + 1
       
-  def updateBarrierTop(self, barrierNumber, textVar):
-    value = int(textVar.get())
-    if ((barrierNumber == (len(self.gaps)-1)) and (value < self.Ny)) or ((value < self.gaps[barrierNumber+1][0]) and (value > self.gaps[barrierNumber][0])):
+  def updateBarrierTop(self, barrierNumber, intVar):
+    value = intVar.get()
+    if ((barrierNumber == (len(self.gaps)-1)) and (value < self.Ny) and (value > self.gaps[-1][0])) or ((barrierNumber < (len(self.gaps)-1)) and (value < self.gaps[barrierNumber+1][0]) and (value > self.gaps[barrierNumber][0])):
       self.gaps[barrierNumber][1] = value
       self.conditionalRedraw()
     else:
-      textVar.set(str(self.gaps[barrierNumber][1]))
+      intVar.set(self.gaps[barrierNumber][1])
 
-  def updateBarrierBottom(self, barrierNumber, textVar):
-    value = int(textVar.get())
-    if ((barrierNumber == 0) and (value > 0)) or ((value > self.gaps[barrierNumber-1][1]) and (value < self.gaps[barrierNumber][1])):
+  def updateBarrierBottom(self, barrierNumber, intVar):
+    value = intVar.get()
+    if ((barrierNumber == 0) and (value > 0) and (value < self.gaps[0][1])) or ((barrierNumber > 0) and (value > self.gaps[barrierNumber-1][1]) and (value < self.gaps[barrierNumber][1])):
       self.gaps[barrierNumber][0] = value
       self.conditionalRedraw()
     else:
-      textVar.set(str(self.gaps[barrierNumber][0]))      
+      intVar.set(self.gaps[barrierNumber][0])    
       
   def removeBarrier(self, barrierNumber):
     del self.gaps[barrierNumber]
