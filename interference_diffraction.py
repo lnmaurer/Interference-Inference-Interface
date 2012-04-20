@@ -18,15 +18,15 @@ barrierX = 100 #x position of the barrier
 plotD = 100 #dimension of plot
   
 d  = 2.0/Nx #spatial grid element size
-dt = d/c/2**0.5 #time step
+dt = d/c/2**0.5 #time step -- this choice is good for a 2D simulation in vacuum
 
 nStable = int((barrierX + sqrt((Nx-barrierX)**2 + Ny**2))*d/c/dt) #time until stability is reached: to barrier then longest way across right domain
 
 #the wave:
-lamb = 20*d #wavelength
-k = 2*pi/lamb #wavenumber
-omega = 2*pi*c/lamb #angular frequency
-tau = lamb/c #time period
+lamb  = 20*d		#wavelength -- 20 points per wavelength yeilds good results
+k     = 2*pi/lamb	#wavenumber
+omega = 2*pi*c/lamb	#angular frequency
+tau   = lamb/c		#time period
 
 #Yee algorithm update coefficients
 Db = dt/mu0/d
@@ -103,7 +103,7 @@ def redrawBarrierFrame():
   global strVars
   global distances
   
-  gaps.sort() #todo: needed?
+  gaps.sort()
   for b in barrierFrames:
     b.destroy() #get rid of old frames
   barrierFrames = []
@@ -193,7 +193,7 @@ def updateEzRMSPlot():
   else:
     data = 256*(float32(transpose(EzRMS)/maxRMSY))    
   im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
-  if n < nStable and running:
+  if n <= nStable and running:
     draw = ImageDraw.Draw(im)
     draw.text((Nx/3, Ny/3), str(nStable - n), font=font, fill=255.0)
   ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
@@ -366,11 +366,9 @@ def resetIntensity():
 def reset():
   global Ez
   global t
-  global haveRestartedAvg
   global maxY
     
   n = 0
-  haveRestartedAvg = False
   resetIntensity()
   Ez = zeros((NEZx, NEZy, 3))
   maxY = 1.0
@@ -400,7 +398,7 @@ def fastForwardStep():
   global ezPlot
   global fastForwarding
 
-  if n < nEnd:
+  if n <= nEnd:
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
     im = Image.new('RGB', (Nx,Ny))
@@ -420,13 +418,10 @@ def fastForwardStep():
       start()
   
 def run():
-  global haveRestartedAvg
-  
   if running:
     timer = time.clock()
-    if n > nStable and not haveRestartedAvg: #todo: clean up reset
+    if n == nStable:
       resetIntensity()
-      haveRestartedAvg = True
     step()
     redrawCanvases()
     print str(time.clock()-timer)
@@ -511,7 +506,6 @@ Hx = zeros((NHXx, NHXy))
 Hy = zeros((NHYx, NHYy))
 maxY = 1 #contains the largest Ez seen
 font = ImageFont.truetype("BebasNeue.otf", 90)
-haveRestartedAvg = False
 fastForwarding = False
 
 #THE GUI
