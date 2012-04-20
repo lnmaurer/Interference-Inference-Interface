@@ -21,48 +21,49 @@ class Interface:
   
   plotD = 100 #dimension of plot
   
-  d  = 2.0/Nx
-  dt = d/c/2**0.5
+  d  = 2.0/Nx #spatial grid element size
+  dt = d/c/2**0.5 #time step
   
-  tStable = sqrt(Nx**2 + Ny**2)*d/c
+  tStable = (barrierX + sqrt((Nx-barrierX)**2 + Ny**2))*d/c #time until stability is reached: to barrier then longest way across right domain
   
+  #Yee algorithm update coefficients
   Db = dt/mu0/d
   Cb = dt/epsilon0/d
   
-  NEZx = Nx #Ez at x endpoints
-  NEZy = Ny #Ez at y endpoints
+  NEZx = Nx #number of Ez grid points in x direction -- goes all the way to the edge
+  NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the edge
   #range updated by Yee algorithm:
   EZx_range = slice(barrierX+1, NEZx-1) #right end is RBC and left side is explicitly calculated, so not updated using Yee algorithm
   EZy_range = slice(1, NEZy-1) #top and bottom are RBCs, so not updated using Yee algorithm
   #range updated by explicit formula:
   EZx_ex_range = slice(0, barrierX+1)
   EZy_ex_range = slice(0, NEZy)
+  #everything
+  EZx_all = slice(0,NEZx)
+  EZy_all = slice(0,NEZy)
   
-  NHXx = Nx     #Hx at x endpoints
+  NHXx = Nx     #Hx goes all the way to x endpoints
   NHXy = Ny - 1 #Hx not at y endpoints, so -1
   HXx_range = slice(0, NHXx) #all positions updated using Yee
   HXy_range = slice(0, NHXy)
 
   NHYx = Nx - 1 #Hy not at x endpoints, so -1
-  NHYy = Ny     #Hy at y endpoints
+  NHYy = Ny     #Hy goes all the way to y endpoints
   HYx_range = slice(0, NHYx) #all y positions updated using Yee
   HYy_range = slice(0, NHYy) 
-  
-  minFreq = 1
-  maxFreq = 37
 
   def __init__(self):
 #for the simulation
     self.t = 0 #will hold the current time
-    self.t_avg = 0 #hold the time since averaging started
-    self.cont = False #the simulation isn't currently running
+    self.tAveraging = 0 #hold the time since averaging started
+    self.running = False #the simulation isn't currently running
     self.Ez = zeros((self.NEZx, self.NEZy,3)) #3rd dimension to keep track of past values of Ez.
     self.EzSQ = zeros((self.NEZx, self.NEZy))
     self.Hx = zeros((self.NHXx, self.NHXy))
     self.Hy = zeros((self.NHYx, self.NHYy))
     self.maxY = 1 #contains the largest Ez seen
     
-    #for testing only
+    #for testing only???
     self.lamb = 20*self.d
     self.k = 2*pi/self.lamb
     self.omega = 2*pi*self.c/self.lamb
@@ -73,7 +74,7 @@ class Interface:
     self.fastForwarding = False
 #The root window
     self.root = Tkinter.Tk()
-    self.root.title("Leon's Olde Interference & Diffraction Simulator")
+    self.root.title("Leon's New Fangled Interference & Diffraction Simulator")
     
 #The menubar and menus
     menubar = Tkinter.Menu(self.root)
@@ -284,40 +285,46 @@ class Interface:
     
   def updateEzRMSPlot(self):
     if self.avgSetting.get() == 'sq':
-      data = 256*(float32(transpose(self.EzSQ)/self.t_avg/self.maxRMSY**2))  
+      data = 256*(float32(transpose(self.EzSQ)/self.tAveraging/self.maxRMSY**2))  
     else:
       data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))    
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
-    if self.t < self.tStable and self.cont:
+    if self.t < self.tStable and self.running:
       count = int(math.ceil((self.tStable - self.t)/self.dt))
       draw = ImageDraw.Draw(im)
       draw.text((self.Nx/3, self.Ny/3), str(count), font=self.font, fill=255.0)
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
+
+  def applyAveraging(self, xS, yS, invert=False):
+    if self.avgSetting.get() == 'amp':
+      v = int_(numpy.round((1+self.EzRMS[xS,yS]*sqrt(2)/self.maxY)*50))
+    elif self.avgSetting.get() == 'rms':
+      v = int_(numpy.round((self.EzRMS[xS,yS]/self.maxRMSY)*99))
+    else:
+      v = int_(numpy.round((self.EzSQ[xS,yS]/self.tAveraging/self.maxRMSY**2)*99))
     
+    if invert:
+      v = ones(v.shape)*100 - v
+    return v
+    
+  def plot(self, draw, x, y, color):
+    if self.traceSetting.get() == 'line':
+      draw.line(zip(x,y), fill=color)
+    else:
+      draw.point(zip(x,y), fill=color)
+      
   def updateHorizPlot(self):
     im = Image.new('RGB', (self.Nx,self.plotD))
     draw = ImageDraw.Draw(im)
     x = range(0,self.Nx)
     
     #plot EzRMS
-    if self.avgSetting.get() == 'amp':
-      y = int_(numpy.round((1-self.EzRMS[:,self.sliceY]*sqrt(2)/self.maxY)*50))
-    elif self.avgSetting.get() == 'rms':
-      y = int_(numpy.round((1-self.EzRMS[:,self.sliceY]/self.maxRMSY)*99))
-    else:
-      y = int_(numpy.round((1-self.EzSQ[:,self.sliceY]/self.t_avg/self.maxRMSY**2)*99))
-      
-    if self.traceSetting.get() == 'line':
-      draw.line(zip(x,y), fill="green")
-    else:
-      draw.point(zip(x,y), fill="green")
+    y = self.applyAveraging(self.EZx_all, self.sliceY, invert=True)
+    self.plot(draw, x, y, 'green')
       
     #plot Ez
     y = int_(numpy.round((-self.Ez[:,self.sliceY,0]/self.maxY+1)*50))
-    if self.traceSetting.get() == 'line':
-      draw.line(zip(x,y), fill="yellow")
-    else:
-      draw.point(zip(x,y), fill="yellow")
+    self.plot(draw, x, y, 'yellow')
       
     self.horizPlot = ImageTk.PhotoImage(image=im)
 
@@ -327,25 +334,12 @@ class Interface:
     y = range(0,self.Ny)
     
     #plot EzRMS
-    #x = int_(numpy.round((self.EzRMS[self.sliceX,:]/self.maxRMSY)*99))
-    if self.avgSetting.get() == 'amp':
-      x = int_(numpy.round((1+self.EzRMS[self.sliceX,:]*sqrt(2)/self.maxY)*50))
-    elif self.avgSetting.get() == 'rms':
-      x = int_(numpy.round((self.EzRMS[self.sliceX,:]/self.maxRMSY)*99))
-    else:
-      x = int_(numpy.round((self.EzSQ[self.sliceX,:]/self.t_avg/self.maxRMSY**2)*99))    
-    if self.traceSetting.get() == 'line':
-      draw.line(zip(x,y), fill="green")
-    else:
-      draw.point(zip(x,y), fill="green")
+    x = self.applyAveraging(self.sliceX, self.EZy_all)
+    self.plot(draw, x, y, 'green')
       
     #plot Ez
     x = int_(numpy.round((self.Ez[self.sliceX,:,0]/self.maxY+1)*50))
-    
-    if self.traceSetting.get() == 'line':
-      draw.line(zip(x,y), fill="yellow")
-    else:
-      draw.point(zip(x,y), fill="yellow")
+    self.plot(draw, x, y, 'yellow')
       
     self.vertPlot = ImageTk.PhotoImage(image=im)  
   
@@ -358,7 +352,7 @@ class Interface:
     self.VertPlotCanvas1.delete('all')
     self.VertPlotCanvas2.delete('all')
     
-    self.EzRMS = sqrt(self.EzSQ/(self.t_avg+self.dt/1e6))
+    self.EzRMS = sqrt(self.EzSQ/(self.tAveraging+self.dt/1e6))
     self.maxRMSY = numpy.max(self.EzRMS)
     if self.maxRMSY == 0:
       self.maxRMSY = 1
@@ -423,7 +417,7 @@ class Interface:
     self.setSliceY(eventObj.y)
 
   def conditionalRedraw(self):
-    if not self.cont:
+    if not self.running:
       self.redrawCanvases()
       
   def setSliceY(self, y):
@@ -449,7 +443,7 @@ class Interface:
       self.conditionalRedraw()  
     
   def resetIntensity(self):
-    self.t_avg = 0
+    self.tAveraging = 0
     self.EzSQ = zeros((self.NEZx, self.NEZy))
       
   def reset(self):
@@ -464,11 +458,11 @@ class Interface:
     #todo: reset if it's never been run before
     #todo: don't do anything if it's already running
     #todo: disable frequency slider
-    self.cont = True
+    self.running = True
     self.run()
     
   def stop(self):
-    self.cont = False
+    self.running = False
   
   def fastForward(self):
     self.tEnd = self.t + self.tStable
@@ -493,7 +487,7 @@ class Interface:
       self.start()
   
   def run(self):
-    if self.cont:
+    if self.running:
       t = time.clock()
       if self.t > self.tStable and not self.haveRestartedAvg: #todo: clean up reset
 	self.resetIntensity()
@@ -563,7 +557,7 @@ class Interface:
     
     ##finially, update the time and the sources todo: don't have to update the sources twice?
     self.t = self.t + self.dt
-    self.t_avg = self.t_avg + self.dt
+    self.tAveraging = self.tAveraging + self.dt
     Ez[self.EZx_ex_range, self.EZy_ex_range, 0] = sin(self.k*x-self.omega*self.t)/(1+exp(-(tr-3*self.tau)/self.tau))*((tr > 0).astype(float))
     invGaps = [ypos for pair in self.gaps for ypos in pair] #flatten self.gaps
     invGaps.insert(0,0) #put zero for the first item
