@@ -80,13 +80,11 @@ class Interface:
   
     #the file menu
     filemenu = Tkinter.Menu(menubar, tearoff=0)
-    filemenu.add_command(label="Save Experiment As", accelerator="Ctrl+S")
-    filemenu.add_command(label="Load Experiment", accelerator="Ctrl+O")
-    filemenu.add_separator()
+    #filemenu.add_command(label="Save Experiment As", accelerator="Ctrl+S")
+    #filemenu.add_command(label="Load Experiment", accelerator="Ctrl+O")
+    #filemenu.add_separator()
     filemenu.add_command(label="Exit", accelerator="Ctrl+Q", command=self.root.quit)
     #bind keys to the actions
-    #self.root.bind_all('<Control-s>', lambda arg: self.saveExperiment())
-    #self.root.bind_all('<Control-o>', lambda arg: self.loadExperiment())
     self.root.bind_all('<Control-q>', lambda arg: self.root.quit())
     menubar.add_cascade(label="File", menu=filemenu)
   
@@ -177,8 +175,19 @@ class Interface:
 #the view control frame
     self.controlFrame = ttk.Labelframe(self.root, text='Control')
     self.controlFrame.grid(column=1, row=1, sticky='nsew',padx=5,pady=5)
+    
+    self.traceSetting = Tkinter.StringVar(value="line")
+    ttk.Label(self.controlFrame, text="Trace setting:").grid(column=0, row=0, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Lines", variable=self.traceSetting, value="line").grid(column=0, row=1, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Dots", variable=self.traceSetting, value="dot").grid(column=0, row=2, sticky='nsew', padx=5, pady=5)
+    
+    self.avgSetting = Tkinter.StringVar(value='amp')
+    ttk.Label(self.controlFrame, text="Displayed average:").grid(column=0, row=3, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Amplitude", variable=self.avgSetting, value="amp").grid(column=0, row=4, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Ez_rms", variable=self.avgSetting, value="rms").grid(column=0, row=5, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Ez_rms^2", variable=self.avgSetting, value="sq").grid(column=0, row=6, sticky='nsew', padx=5, pady=5)   
 
-    #almost done
+#almost done
     self.redrawCanvases();    
     
   def redrawBarrierFrame(self):
@@ -256,7 +265,11 @@ class Interface:
     self.ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
     
   def updateEzRMSPlot(self):
-    data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))
+    if self.avgSetting.get() == 'sq':
+      data = 256*(float32(transpose(self.EzSQ)/self.t_avg/self.maxRMSY**2))  
+      print data[0,0]
+    else:
+      data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))    
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
     if self.t < self.tStable and self.cont:
       count = int(math.ceil((self.tStable - self.t)/self.dt))
@@ -268,24 +281,55 @@ class Interface:
     im = Image.new('RGB', (self.Nx,self.plotD))
     draw = ImageDraw.Draw(im)
     x = range(0,self.Nx)
+    
     #plot EzRMS
-    y = int_(numpy.round((self.EzRMS[:,self.sliceY]*sqrt(2)/self.maxY+1)*50))
-    draw.line(zip(x,y), fill="green")
+    if self.avgSetting.get() == 'amp':
+      y = int_(numpy.round((1-self.EzRMS[:,self.sliceY]*sqrt(2)/self.maxY)*50))
+    elif self.avgSetting.get() == 'rms':
+      y = int_(numpy.round((1-self.EzRMS[:,self.sliceY]/self.maxRMSY)*99))
+    else:
+      y = int_(numpy.round((1-self.EzSQ[:,self.sliceY]/self.t_avg/self.maxRMSY**2)*99))
+      
+    if self.traceSetting.get() == 'line':
+      draw.line(zip(x,y), fill="green")
+    else:
+      draw.point(zip(x,y), fill="green")
+      
     #plot Ez
     y = int_(numpy.round((-self.Ez[:,self.sliceY,0]/self.maxY+1)*50))
-    draw.line(zip(x,y), fill="yellow")
+    if self.traceSetting.get() == 'line':
+      draw.line(zip(x,y), fill="yellow")
+    else:
+      draw.point(zip(x,y), fill="yellow")
+      
     self.horizPlot = ImageTk.PhotoImage(image=im)
 
   def updateVertPlot(self):
     im = Image.new('RGB', (self.plotD, self.Ny))
     draw = ImageDraw.Draw(im)
     y = range(0,self.Ny)
+    
     #plot EzRMS
-    x = int_(numpy.round((self.EzRMS[self.sliceX,:]/self.maxRMSY)*99))
-    draw.point(zip(x,y), fill="green")
+    #x = int_(numpy.round((self.EzRMS[self.sliceX,:]/self.maxRMSY)*99))
+    if self.avgSetting.get() == 'amp':
+      x = int_(numpy.round((1+self.EzRMS[self.sliceX,:]*sqrt(2)/self.maxY)*50))
+    elif self.avgSetting.get() == 'rms':
+      x = int_(numpy.round((self.EzRMS[self.sliceX,:]/self.maxRMSY)*99))
+    else:
+      x = int_(numpy.round((self.EzSQ[self.sliceX,:]/self.t_avg/self.maxRMSY**2)*99))    
+    if self.traceSetting.get() == 'line':
+      draw.line(zip(x,y), fill="green")
+    else:
+      draw.point(zip(x,y), fill="green")
+      
     #plot Ez
     x = int_(numpy.round((self.Ez[self.sliceX,:,0]/self.maxY+1)*50))
-    draw.point(zip(x,y), fill="yellow")
+    
+    if self.traceSetting.get() == 'line':
+      draw.line(zip(x,y), fill="yellow")
+    else:
+      draw.point(zip(x,y), fill="yellow")
+      
     self.vertPlot = ImageTk.PhotoImage(image=im)  
   
     
