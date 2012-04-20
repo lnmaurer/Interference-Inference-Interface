@@ -159,11 +159,11 @@ class Interface:
     self.barrierFrame = ttk.Labelframe(self.root, text='Barrier')
     self.barrierFrame.grid(column=1,row=0,sticky='nsew',padx=5,pady=5)
 
-    ttk.Button(self.barrierFrame, text='Add Opening').grid(column=0, row=0, columnspan=2, sticky='nsew', padx=5, pady=5) #todo: add command
-    ttk.Label(self.barrierFrame, text="Top:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
+    ttk.Button(self.barrierFrame, text='Add Opening', command=self.addOpening).grid(column=0, row=0, columnspan=2, sticky='nsew', padx=5, pady=5)
+    ttk.Label(self.barrierFrame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
     self.bottomEntry = ttk.Entry(self.barrierFrame, width=4) #todo: get validation working for tkEntry
     self.bottomEntry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
-    ttk.Label(self.barrierFrame, text="Bottom:").grid(column=0, row=2, sticky='nes', padx=5, pady=5)
+    ttk.Label(self.barrierFrame, text="Top:").grid(column=0, row=2, sticky='nes', padx=5, pady=5)
     self.topEntry = ttk.Entry(self.barrierFrame, width=4) #todo: get validation working for tkEntry
     self.topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
     
@@ -189,7 +189,25 @@ class Interface:
 
 #almost done
     self.redrawCanvases();    
-    
+  
+  def addOpening(self):
+    bot = int(self.bottomEntry.get())
+    top = int(self.topEntry.get())
+  
+    print bot
+    print top
+    if bot > 0 and top < self.Ny and bot < top: #some initial checks that top and bot better pass
+      newOrder = self.gaps[:]
+      newOrder.append([bot,top])
+      newOrder.sort()
+      newOrderFlat = [ypos for pair in newOrder for ypos in pair] #flatten
+      if (newOrderFlat == sorted(newOrderFlat) #catches things like [50,100],[90,120] -- overlapping openings
+         and len(list(set(newOrderFlat))) == len(newOrderFlat)): #catchs things like [50,100],[100,120] -- openings with no space between them
+	self.gaps = newOrder
+	self.redrawBarrierFrame()
+	self.conditionalRedraw()
+	
+  
   def redrawBarrierFrame(self):
     self.gaps.sort()
     for b in self.barrierFrames:
@@ -237,8 +255,6 @@ class Interface:
 
   def updateBarrierBottom(self, barrierNumber, textVar):
     value = int(textVar.get())
-    print barrierNumber
-    print value
     if ((barrierNumber == 0) and (value > 0)) or ((value > self.gaps[barrierNumber-1][1]) and (value < self.gaps[barrierNumber][1])):
       self.gaps[barrierNumber][0] = value
       self.conditionalRedraw()
@@ -268,7 +284,6 @@ class Interface:
   def updateEzRMSPlot(self):
     if self.avgSetting.get() == 'sq':
       data = 256*(float32(transpose(self.EzSQ)/self.t_avg/self.maxRMSY**2))  
-      print data[0,0]
     else:
       data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))    
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
@@ -441,6 +456,7 @@ class Interface:
     self.haveRestartedAvg = False
     self.resetIntensity()
     self.Ez = zeros((self.NEZx, self.NEZy, 3))
+    self.maxY = 1.0
     self.conditionalRedraw()
   
   def start(self):
