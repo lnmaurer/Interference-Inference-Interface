@@ -94,7 +94,22 @@ class Interface:
     editmenu.add_command(label="Copy", accelerator="Ctrl+C") #todo: add command
     editmenu.add_command(label="Paste", accelerator="Ctrl+V") #todo: add command
     menubar.add_cascade(label="Edit", menu=editmenu)
-  
+    
+    #the view menu
+    viewmenu = Tkinter.Menu(menubar, tearoff=0)
+    self.traceSetting = Tkinter.StringVar(value="line")
+    viewmenu.add_radiobutton(label="Trace Setting:", state="disabled")
+    viewmenu.add_radiobutton(label="Lines", variable=self.traceSetting, value="line", command=self.conditionalRedraw)
+    viewmenu.add_radiobutton(label="Dots", variable=self.traceSetting, value="dot", command=self.conditionalRedraw)
+    
+    viewmenu.add_separator()
+    self.avgSetting = Tkinter.StringVar(value='amp')
+    viewmenu.add_radiobutton(label="Displayed Average:", state="disabled")
+    viewmenu.add_radiobutton(label="Amplitude", variable=self.avgSetting, value="amp", command=self.conditionalRedraw)
+    viewmenu.add_radiobutton(label="Ez_rms", variable=self.avgSetting, value="rms", command=self.conditionalRedraw)
+    viewmenu.add_radiobutton(label="Ez_rms^2", variable=self.avgSetting, value="sq", command=self.conditionalRedraw)
+    menubar.add_cascade(label="View", menu=viewmenu)
+    
     #the simulation menu
     simmenu = Tkinter.Menu(menubar, tearoff=0)
     simmenu.add_command(label="Run", accelerator="Ctrl+R", command=self.start)
@@ -113,7 +128,7 @@ class Interface:
     
 #The view frame
     self.viewFrame = ttk.Labelframe(self.root, text='View')
-    self.viewFrame.grid(column=0, row=0, rowspan=2, sticky='nsew',padx=5,pady=5)
+    self.viewFrame.grid(column=0, row=0, sticky='nsew',padx=5,pady=5)
     
     self.Ezcanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
     self.Ezcanvas.grid(column=0, row=0, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)    
@@ -171,21 +186,6 @@ class Interface:
     self.barrierFrames = []
     
     self.redrawBarrierFrame()
-
-#the view control frame
-    self.controlFrame = ttk.Labelframe(self.root, text='Control')
-    self.controlFrame.grid(column=1, row=1, sticky='nsew',padx=5,pady=5)
-    
-    self.traceSetting = Tkinter.StringVar(value="line")
-    ttk.Label(self.controlFrame, text="Trace setting:").grid(column=0, row=0, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Lines", variable=self.traceSetting, value="line", command=self.conditionalRedraw).grid(column=0, row=1, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Dots", variable=self.traceSetting, value="dot", command=self.conditionalRedraw).grid(column=0, row=2, sticky='nsew', padx=5, pady=5)
-    
-    self.avgSetting = Tkinter.StringVar(value='amp')
-    ttk.Label(self.controlFrame, text="Displayed average:").grid(column=0, row=3, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Amplitude", variable=self.avgSetting, value="amp", command=self.conditionalRedraw).grid(column=0, row=4, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Ez_rms", variable=self.avgSetting, value="rms", command=self.conditionalRedraw).grid(column=0, row=5, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Ez_rms^2", variable=self.avgSetting, value="sq", command=self.conditionalRedraw).grid(column=0, row=6, sticky='nsew', padx=5, pady=5)   
 
 #almost done
     self.redrawCanvases();    
