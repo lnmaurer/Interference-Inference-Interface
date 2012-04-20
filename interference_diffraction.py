@@ -178,14 +178,14 @@ class Interface:
     
     self.traceSetting = Tkinter.StringVar(value="line")
     ttk.Label(self.controlFrame, text="Trace setting:").grid(column=0, row=0, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Lines", variable=self.traceSetting, value="line").grid(column=0, row=1, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Dots", variable=self.traceSetting, value="dot").grid(column=0, row=2, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Lines", variable=self.traceSetting, value="line", command=self.conditionalRedraw).grid(column=0, row=1, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Dots", variable=self.traceSetting, value="dot", command=self.conditionalRedraw).grid(column=0, row=2, sticky='nsew', padx=5, pady=5)
     
     self.avgSetting = Tkinter.StringVar(value='amp')
     ttk.Label(self.controlFrame, text="Displayed average:").grid(column=0, row=3, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Amplitude", variable=self.avgSetting, value="amp").grid(column=0, row=4, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Ez_rms", variable=self.avgSetting, value="rms").grid(column=0, row=5, sticky='nsew', padx=5, pady=5)
-    ttk.Radiobutton(self.controlFrame, text="Ez_rms^2", variable=self.avgSetting, value="sq").grid(column=0, row=6, sticky='nsew', padx=5, pady=5)   
+    ttk.Radiobutton(self.controlFrame, text="Amplitude", variable=self.avgSetting, value="amp", command=self.conditionalRedraw).grid(column=0, row=4, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Ez_rms", variable=self.avgSetting, value="rms", command=self.conditionalRedraw).grid(column=0, row=5, sticky='nsew', padx=5, pady=5)
+    ttk.Radiobutton(self.controlFrame, text="Ez_rms^2", variable=self.avgSetting, value="sq", command=self.conditionalRedraw).grid(column=0, row=6, sticky='nsew', padx=5, pady=5)   
 
 #almost done
     self.redrawCanvases();    
@@ -196,29 +196,33 @@ class Interface:
       b.destroy()
     self.barrierFrames = []
     self.strVars = [] #need to save StringVars or else they get garbage collected
+    self.distances = []
     r = 3 #rows 0,1,2 already taken by widgets for adding an opeing
     
     for gap in self.gaps:
       bn = r-3 #barrier number
-      frame = ttk.Labelframe(self.barrierFrame, text="Barrier {}".format(bn))
+      frame = ttk.Labelframe(self.barrierFrame, text="Opening {}".format(bn))
       frame.grid(column=0, row=r, columnspan=2, sticky='nesw', padx=5, pady=5)
       
       top = Tkinter.StringVar()
       bottom = Tkinter.StringVar()
+      distance = Tkinter.StringVar(value=str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
       ttk.Label(frame, text="Top:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
       entry = ttk.Entry(frame, width=4, textvariable=top)
+      #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
       entry.bind("<Return>",lambda arg, n=bn, tv=top: self.updateBarrierTop(n,tv))
       entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
       ttk.Label(frame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
       entry = ttk.Entry(frame, width=4, textvariable=bottom)
       entry.bind("<Return>",lambda arg, n=bn, tv=bottom: self.updateBarrierBottom(n,tv))
       entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
-      #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
-      ttk.Button(frame, text='Remove', command=lambda n=bn: self.removeBarrier(n)).grid(column=0, row=2, sticky='nsew', columnspan=2, padx=5, pady=5)
+      ttk.Label(frame, textvariable=distance).grid(column=0, row=2, sticky='nes', padx=5, pady=5)
+      ttk.Button(frame, text='Remove', command=lambda n=bn: self.removeBarrier(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
       top.set(str(gap[1]))     
       bottom.set(str(gap[0]))
       self.strVars.append(top)
-      self.strVars.append(bottom)      
+      self.strVars.append(bottom) 
+      self.distances.append(distance)
       
       self.barrierFrames.append(frame)
       r = r + 1
@@ -227,8 +231,7 @@ class Interface:
     value = int(textVar.get())
     if ((barrierNumber == (len(self.gaps)-1)) and (value < self.Ny)) or ((value < self.gaps[barrierNumber+1][0]) and (value > self.gaps[barrierNumber][0])):
       self.gaps[barrierNumber][1] = value
-      if not self.cont:
-	self.redrawCanvases()
+      self.conditionalRedraw()
     else:
       textVar.set(str(self.gaps[barrierNumber][1]))
 
@@ -238,16 +241,14 @@ class Interface:
     print value
     if ((barrierNumber == 0) and (value > 0)) or ((value > self.gaps[barrierNumber-1][1]) and (value < self.gaps[barrierNumber][1])):
       self.gaps[barrierNumber][0] = value
-      if not self.cont:
-	self.redrawCanvases()
+      self.conditionalRedraw()
     else:
       textVar.set(str(self.gaps[barrierNumber][0]))      
       
   def removeBarrier(self, barrierNumber):
     del self.gaps[barrierNumber]
     self.redrawBarrierFrame()
-    if not self.cont:
-      self.redrawCanvases()
+    self.conditionalRedraw()
     
   def clearCanvasBindings(self, eventObj):
     self.Ezcanvas.bind("<B1-Motion>", lambda e: None)
@@ -404,12 +405,17 @@ class Interface:
     
   def horizDragMethod(self, eventObj):
     self.setSliceY(eventObj.y)
-    
+
+  def conditionalRedraw(self):
+    if not self.cont:
+      self.redrawCanvases()
+      
   def setSliceY(self, y):
     if (y >= 0) and (y < self.Ny):
       self.sliceY = y
-      if not self.cont:
-	self.redrawCanvases()
+      for gap, dist in zip(self.gaps, self.distances):
+	dist.set(str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
+      self.conditionalRedraw()
     
   def vertClickMethod(self, eventObj):
     self.Ezcanvas.bind('<B1-Motion>', self.vertDragMethod)
@@ -422,8 +428,9 @@ class Interface:
   def setSliceX(self, x):
     if (x >= 0) and (x < self.Nx):
       self.sliceX = x
-      if not self.cont:
-	self.redrawCanvases()    
+      for gap, dist in zip(self.gaps, self.distances):
+	dist.set(str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
+      self.conditionalRedraw()  
     
   def resetIntensity(self):
     self.t_avg = 0
@@ -434,8 +441,7 @@ class Interface:
     self.haveRestartedAvg = False
     self.resetIntensity()
     self.Ez = zeros((self.NEZx, self.NEZy, 3))
-    if not self.cont:
-      self.redrawCanvases()
+    self.conditionalRedraw()
   
   def start(self):
     #todo: reset if it's never been run before
@@ -462,7 +468,7 @@ class Interface:
       self.ezPlot = ImageTk.PhotoImage(image=im)
       self.Ezcanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
       self.EzRMScanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
-      self.step()
+      self.step(avg=False)
       self.root.after(1,self.fastForwardStep)
     else:
       self.fastForwarding = False
@@ -481,7 +487,7 @@ class Interface:
       if not self.fastForwarding:
 	self.root.after(1,self.run)
   
-  def step(self):
+  def step(self, avg=True):
     #so that we don't need a bazillion "self."s
     Ez = self.Ez
     Hx = self.Hx
@@ -551,7 +557,8 @@ class Interface:
     
     #strictly speaking, the following will blow up to infinity if you integrate forever (since the FT of a sinusoid is a delta function)
     #however, we're not that patient. plus, floating point limitations will prevent it (once the numbers are large enough, adding a small number to them won't change them)
-    self.EzSQ = self.EzSQ + square(Ez[:,:,0])*self.dt
+    if avg:
+      self.EzSQ = self.EzSQ + square(Ez[:,:,0])*self.dt
     self.Ez = Ez
     self.Hx = Hx
     self.Hy = Hy  
