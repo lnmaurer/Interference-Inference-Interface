@@ -193,9 +193,6 @@ class Interface:
   def addOpening(self):
     bot = int(self.bottomEntry.get())
     top = int(self.topEntry.get())
-  
-    print bot
-    print top
     if bot > 0 and top < self.Ny and bot < top: #some initial checks that top and bot better pass
       newOrder = self.gaps[:]
       newOrder.append([bot,top])
@@ -224,7 +221,8 @@ class Interface:
       
       top = Tkinter.IntVar()
       bottom = Tkinter.IntVar()
-      distance = Tkinter.StringVar(value=str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
+      distance = Tkinter.StringVar()
+      self.setDistance(gap, distance)
       ttk.Label(frame, text="Top:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
       #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
       entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=self.Nx, command=lambda n=bn, tv=top: self.updateBarrierTop(n,tv))
@@ -260,7 +258,10 @@ class Interface:
       self.conditionalRedraw()
     else:
       intVar.set(self.gaps[barrierNumber][0])    
-      
+  
+  def setDistance(self, gap, textVar):
+    textVar.set(str(int(round(sqrt(((gap[0]+gap[1])/2.0-self.sliceY)**2+(self.barrierX-self.sliceX)**2)))))
+  
   def removeBarrier(self, barrierNumber):
     del self.gaps[barrierNumber]
     self.redrawBarrierFrame()
@@ -429,7 +430,7 @@ class Interface:
     if (y >= 0) and (y < self.Ny):
       self.sliceY = y
       for gap, dist in zip(self.gaps, self.distances):
-	dist.set(str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
+	self.setDistance(gap, dist)
       self.conditionalRedraw()
     
   def vertClickMethod(self, eventObj):
@@ -444,7 +445,7 @@ class Interface:
     if (x >= 0) and (x < self.Nx):
       self.sliceX = x
       for gap, dist in zip(self.gaps, self.distances):
-	dist.set(str(int(sqrt(((gap[0]+gap[1])/2-self.sliceY)**2+(100-self.sliceX)**2))))
+	self.setDistance(gap, dist)
       self.conditionalRedraw()  
     
   def resetIntensity(self):
