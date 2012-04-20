@@ -295,16 +295,19 @@ class Interface:
       draw.text((self.Nx/3, self.Ny/3), str(count), font=self.font, fill=255.0)
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
-  def applyAveraging(self, xS, yS, invert=False):
+  def applyAveraging(self, xS, yS, invert=False, othercoord=None):
     if self.avgSetting.get() == 'amp':
       v = int_(numpy.round((1+self.EzRMS[xS,yS]*sqrt(2)/self.maxY)*50))
+      if othercoord != None: #in this case, let's plot +/-amplitude
+	othercoord.extend(othercoord[::-1]) #extend the coordinates so they're like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0]
+	v = concatenate((v,100-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
     elif self.avgSetting.get() == 'rms':
       v = int_(numpy.round((self.EzRMS[xS,yS]/self.maxRMSY)*99))
     else:
       v = int_(numpy.round((self.EzSQ[xS,yS]/self.tAveraging/self.maxRMSY**2)*99))
     
     if invert:
-      v = ones(v.shape)*100 - v
+      v = 100 - v
     return v
     
   def plot(self, draw, x, y, color):
@@ -319,7 +322,7 @@ class Interface:
     x = range(0,self.Nx)
     
     #plot EzRMS
-    y = self.applyAveraging(self.EZx_all, self.sliceY, invert=True)
+    y = self.applyAveraging(self.EZx_all, self.sliceY, invert=True, othercoord=x)
     self.plot(draw, x, y, 'green')
       
     #plot Ez
@@ -334,7 +337,7 @@ class Interface:
     y = range(0,self.Ny)
     
     #plot EzRMS
-    x = self.applyAveraging(self.sliceX, self.EZy_all)
+    x = self.applyAveraging(self.sliceX, self.EZy_all, othercoord=y)
     self.plot(draw, x, y, 'green')
       
     #plot Ez
