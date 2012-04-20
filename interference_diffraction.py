@@ -24,6 +24,8 @@ class Interface:
   d  = 2.0/Nx
   dt = d/c/2**0.5
   
+  tStable = sqrt(Nx**2 + Ny**2)*d/c
+  
   Db = dt/mu0/d
   Cb = dt/epsilon0/d
   
@@ -59,7 +61,6 @@ class Interface:
     self.Hx = zeros((self.NHXx, self.NHXy))
     self.Hy = zeros((self.NHYx, self.NHYy))
     self.maxY = 1 #contains the largest Ez seen
-    self.haveRestartedAvg = False
     
     #for testing only
     self.lamb = 20*self.d
@@ -68,7 +69,8 @@ class Interface:
     self.tau = self.lamb/self.c
 #misc
     self.font = ImageFont.truetype("BebasNeue.otf", 90)
-    
+    self.haveRestartedAvg = False
+    self.fastForwarding = False
 #The root window
     self.root = Tkinter.Tk()
     self.root.title("Leon's Olde Interference & Diffraction Simulator")
@@ -105,13 +107,15 @@ class Interface:
     self.root.bind("<Control-R>", lambda arg: self.reset())
     simmenu.add_command(label="Reset Average", accelerator="Ctrl+Shift+A", command=self.resetIntensity)
     self.root.bind("<Shift-A>", lambda arg: self.resetIntensity())
+    simmenu.add_command(label="Fast Forward", accelerator="Ctrl+F", command=self.fastForward)
+    self.root.bind("<Control-f>", lambda arg: self.fastForward())
     menubar.add_cascade(label="Simulation", menu=simmenu)
     
     self.root.config(menu=menubar)
     
 #The view frame
     self.viewFrame = ttk.Labelframe(self.root, text='View')
-    self.viewFrame.grid(column=0,row=0,sticky='nsew',padx=5,pady=5)
+    self.viewFrame.grid(column=0, row=0, rowspan=2, sticky='nsew',padx=5,pady=5)
     
     self.Ezcanvas = Tkinter.Canvas(self.viewFrame, width=self.Nx, height=self.Ny)
     self.Ezcanvas.grid(column=0, row=0, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)    
@@ -157,38 +161,84 @@ class Interface:
     self.barrierFrame = ttk.Labelframe(self.root, text='Barrier')
     self.barrierFrame.grid(column=1,row=0,sticky='nsew',padx=5,pady=5)
 
+    ttk.Button(self.barrierFrame, text='Add Opening').grid(column=0, row=0, columnspan=2, sticky='nsew', padx=5, pady=5) #todo: add command
+    ttk.Label(self.barrierFrame, text="Top:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
+    self.bottomEntry = ttk.Entry(self.barrierFrame, width=4) #todo: get validation working for tkEntry
+    self.bottomEntry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
+    ttk.Label(self.barrierFrame, text="Bottom:").grid(column=0, row=2, sticky='nes', padx=5, pady=5)
+    self.topEntry = ttk.Entry(self.barrierFrame, width=4) #todo: get validation working for tkEntry
+    self.topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
+    
     self.gaps = [[50,70],[230,250]]
+    self.barrierFrames = []
     
-    ttk.Button(self.barrierFrame, text='Add Opening').grid(column=0, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
+    self.redrawBarrierFrame()
 
+#the view control frame
+    self.controlFrame = ttk.Labelframe(self.root, text='Control')
+    self.controlFrame.grid(column=1, row=1, sticky='nsew',padx=5,pady=5)
+
+    #almost done
+    self.redrawCanvases();    
     
-#The simulation frame
-    self.simFrame = ttk.Labelframe(self.root, text='Simulation')
-    self.simFrame.grid(column=0,row=1,columnspan=2,sticky='nsew',padx=5,pady=5)
+  def redrawBarrierFrame(self):
+    self.gaps.sort()
+    for b in self.barrierFrames:
+      b.destroy()
+    self.barrierFrames = []
+    self.strVars = [] #need to save StringVars or else they get garbage collected
+    r = 3 #rows 0,1,2 already taken by widgets for adding an opeing
     
-    #buttons to control the simulation
-    ttk.Button(self.simFrame, text='Run', command=lambda: self.start()).grid(column=0, row=0,sticky='nsew', padx=5, pady=5)
-    ttk.Button(self.simFrame, text='Stop', command=lambda: self.stop()).grid(column=1, row=0,sticky='nsew', padx=5, pady=5)
-    ttk.Button(self.simFrame, text='Reset Simulation').grid(column=2, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
-    ttk.Button(self.simFrame, text='Reset Intensity Averaging', command=lambda: self.resetIntensity()).grid(column=3, row=0,sticky='nsew', padx=5, pady=5) #todo: add command
-    
-    #label to show the current frequency
-    freqLabel = ttk.Label(self.simFrame, text="Frequency = ")
-    freqLabel.grid(column=5, row=1,sticky='nsw', padx=5, pady=5)
-    #slider to set the frequency
-    ttk.Label(self.simFrame, text="Min").grid(column=4, row=0,sticky='nsw', padx=5, pady=5) #todo: give value for min
-    freqScale = ttk.Scale(self.simFrame, orient=Tkinter.HORIZONTAL, from_=self.minFreq, to=self.maxFreq) #todo: units, disable when simulation is running
-    #command to update frequency label when slider is changed
-    def setFreqLabel(arg=None):
-      freqLabel.config(text = "Frequency = " + str(int(freqScale.get())))
-    freqScale.config(command = setFreqLabel)
-    freqScale.grid(column=5, row=0,sticky='nsew', padx=5, pady=5)
-    ttk.Label(self.simFrame, text="Max").grid(column=5, row=0,sticky='nsw', padx=5, pady=5) #todo: give value for min
-    #give initial frequency value
-    setFreqLabel() #todo: not working; starts at zero
-  
-  
-    self.redrawCanvases();
+    for gap in self.gaps:
+      bn = r-3 #barrier number
+      frame = ttk.Labelframe(self.barrierFrame, text="Barrier {}".format(bn))
+      frame.grid(column=0, row=r, columnspan=2, sticky='nesw', padx=5, pady=5)
+      
+      top = Tkinter.StringVar()
+      bottom = Tkinter.StringVar()
+      ttk.Label(frame, text="Top:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
+      entry = ttk.Entry(frame, width=4, textvariable=top)
+      entry.bind("<Return>",lambda arg, n=bn, tv=top: self.updateBarrierTop(n,tv))
+      entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
+      ttk.Label(frame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
+      entry = ttk.Entry(frame, width=4, textvariable=bottom)
+      entry.bind("<Return>",lambda arg, n=bn, tv=bottom: self.updateBarrierBottom(n,tv))
+      entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
+      #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
+      ttk.Button(frame, text='Remove', command=lambda n=bn: self.removeBarrier(n)).grid(column=0, row=2, sticky='nsew', columnspan=2, padx=5, pady=5)
+      top.set(str(gap[1]))     
+      bottom.set(str(gap[0]))
+      self.strVars.append(top)
+      self.strVars.append(bottom)      
+      
+      self.barrierFrames.append(frame)
+      r = r + 1
+      
+  def updateBarrierTop(self, barrierNumber, textVar):
+    value = int(textVar.get())
+    if ((barrierNumber == (len(self.gaps)-1)) and (value < self.Ny)) or ((value < self.gaps[barrierNumber+1][0]) and (value > self.gaps[barrierNumber][0])):
+      self.gaps[barrierNumber][1] = value
+      if not self.cont:
+	self.redrawCanvases()
+    else:
+      textVar.set(str(self.gaps[barrierNumber][1]))
+
+  def updateBarrierBottom(self, barrierNumber, textVar):
+    value = int(textVar.get())
+    print barrierNumber
+    print value
+    if ((barrierNumber == 0) and (value > 0)) or ((value > self.gaps[barrierNumber-1][1]) and (value < self.gaps[barrierNumber][1])):
+      self.gaps[barrierNumber][0] = value
+      if not self.cont:
+	self.redrawCanvases()
+    else:
+      textVar.set(str(self.gaps[barrierNumber][0]))      
+      
+  def removeBarrier(self, barrierNumber):
+    del self.gaps[barrierNumber]
+    self.redrawBarrierFrame()
+    if not self.cont:
+      self.redrawCanvases()
     
   def clearCanvasBindings(self, eventObj):
     self.Ezcanvas.bind("<B1-Motion>", lambda e: None)
@@ -208,8 +258,8 @@ class Interface:
   def updateEzRMSPlot(self):
     data = 256*(float32(transpose(self.EzRMS)/self.maxRMSY))
     im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
-    if self.t < 2.5/self.c and self.cont: #todo: clean up reset time
-      count = int(math.ceil((2.5/self.c - self.t)/self.dt))
+    if self.t < self.tStable and self.cont:
+      count = int(math.ceil((self.tStable - self.t)/self.dt))
       draw = ImageDraw.Draw(im)
       draw.text((self.Nx/3, self.Ny/3), str(count), font=self.font, fill=255.0)
     self.ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
@@ -244,6 +294,8 @@ class Interface:
     self.Ezcanvas.delete('all')
     self.HorizPlotCanvas.delete('all')
     self.EzRMScanvas.delete('all')
+    self.VertPlotCanvas1.delete('all')
+    self.VertPlotCanvas2.delete('all')
     
     self.EzRMS = sqrt(self.EzSQ/(self.t_avg+self.dt/1e6))
     self.maxRMSY = numpy.max(self.EzRMS)
@@ -334,11 +386,12 @@ class Interface:
     self.EzSQ = zeros((self.NEZx, self.NEZy))
       
   def reset(self):
-    pass
-    #todo: enable frequency slider
-    #todo: set t=0
-    #todo: clear the canvas
-    #todo: clear Ez (and make it the right length???)
+    self.t = 0
+    self.haveRestartedAvg = False
+    self.resetIntensity()
+    self.Ez = zeros((self.NEZx, self.NEZy, 3))
+    if not self.cont:
+      self.redrawCanvases()
   
   def start(self):
     #todo: reset if it's never been run before
@@ -349,17 +402,40 @@ class Interface:
     
   def stop(self):
     self.cont = False
+  
+  def fastForward(self):
+    self.tEnd = self.t + self.tStable
+    self.fastForwarding = True
+    self.root.after(1,self.fastForwardStep)
     
+  def fastForwardStep(self):
+    if self.t < self.tEnd:
+      self.Ezcanvas.delete('all')
+      self.EzRMScanvas.delete('all')
+      im = Image.new('RGB', (self.Nx,self.Ny))
+      draw = ImageDraw.Draw(im)
+      draw.text((self.Nx/3, self.Ny/3), str(int((self.tEnd-self.t)/self.dt)), font=self.font, fill='red')
+      self.ezPlot = ImageTk.PhotoImage(image=im)
+      self.Ezcanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
+      self.EzRMScanvas.create_image(0,0,image=self.ezPlot,anchor=Tkinter.NW)
+      self.step()
+      self.root.after(1,self.fastForwardStep)
+    else:
+      self.fastForwarding = False
+      self.resetIntensity()
+      self.start()
+  
   def run(self):
     if self.cont:
       t = time.clock()
-      if self.t > 2.5/self.c and not self.haveRestartedAvg: #todo: clean up reset
+      if self.t > self.tStable and not self.haveRestartedAvg: #todo: clean up reset
 	self.resetIntensity()
 	self.haveRestartedAvg = True
       self.step()
       self.redrawCanvases()
       print str(time.clock()-t)
-      self.root.after(1,self.run) #todo: adjust time???
+      if not self.fastForwarding:
+	self.root.after(1,self.run)
   
   def step(self):
     #so that we don't need a bazillion "self."s
