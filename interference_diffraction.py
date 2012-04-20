@@ -1,7 +1,6 @@
 import Tkinter, tkFileDialog, ttk, tkMessageBox
 import csv
 import time
-import math
 #import numpy as np
 from numpy import *
 import numpy
@@ -21,7 +20,7 @@ plotD = 100 #dimension of plot
 d  = 2.0/Nx #spatial grid element size
 dt = d/c/2**0.5 #time step
 
-tStable = (barrierX + sqrt((Nx-barrierX)**2 + Ny**2))*d/c #time until stability is reached: to barrier then longest way across right domain
+nStable = int((barrierX + sqrt((Nx-barrierX)**2 + Ny**2))*d/c/dt) #time until stability is reached: to barrier then longest way across right domain
 
 #the wave:
 lamb = 20*d #wavelength
@@ -62,8 +61,8 @@ def exportData():
     writer = csv.writer(open(fileName, "w"))
     writer.writerow(('x_slice',sliceX))
     writer.writerow(('y_slice',sliceY))
-    writer.writerow(('t',t))
-    writer.writerow(('time averaging',tAveraging))
+    writer.writerow(('time steps',n))
+    writer.writerow(('time steps averaged',nAveraging))
     
     writer.writerow(('Ez'))
     row = ['y\\x']
@@ -190,14 +189,13 @@ def updateEzRMSPlot():
   global ezRMSPlot
   
   if avgSetting.get() == 'sq':
-    data = 256*(float32(transpose(EzSQ)/tAveraging/maxRMSY**2))  
+    data = 256*(float32(transpose(EzSQ)/nAveraging/maxRMSY**2))  
   else:
     data = 256*(float32(transpose(EzRMS)/maxRMSY))    
   im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
-  if t < tStable and running:
-    count = int(math.ceil((tStable - t)/dt))
+  if n < nStable and running:
     draw = ImageDraw.Draw(im)
-    draw.text((Nx/3, Ny/3), str(count), font=font, fill=255.0)
+    draw.text((Nx/3, Ny/3), str(nStable - n), font=font, fill=255.0)
   ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
 def applyAveraging(xS, yS, invert=False, othercoord=None):
@@ -209,7 +207,7 @@ def applyAveraging(xS, yS, invert=False, othercoord=None):
   elif avgSetting.get() == 'rms': #want to display EzRMS with zero at bottom of plot
     v = int_(numpy.round((EzRMS[xS,yS]/maxRMSY)*99))
   else: #want to display EzRMS^2 with zero at bottom of plot
-    v = int_(numpy.round((EzSQ[xS,yS]/tAveraging/maxRMSY**2)*99))
+    v = int_(numpy.round((EzSQ[xS,yS]/nAveraging/maxRMSY**2)*99))
     
   if invert: #mirror results across axis
     v = 100 - v
@@ -264,7 +262,7 @@ def redrawCanvases():
   VertPlotCanvas1.delete('all')
   VertPlotCanvas2.delete('all')
     
-  EzRMS = sqrt(EzSQ/(tAveraging+dt/1e6))
+  EzRMS = sqrt(EzSQ/(nAveraging+1e-24))
   maxRMSY = numpy.max(EzRMS)
   if maxRMSY == 0:
     maxRMSY = 1
@@ -314,7 +312,7 @@ def redrawCanvases():
   #finially, show the corridnates of the slices
   xStringVar.set("x=" + str(sliceX) + "d")
   yStringVar.set("y=" + str(sliceY) + "d")
-  tStringVar.set("t=" + str(int(t/dt)) + "dt")
+  tStringVar.set("t=" + str(n) + "dt")
   EzStringVar.set("Ez={:+.4f}".format(Ez[sliceX,sliceY,0]))
   EzRMSStringVar.set("EzRMS={:.4f}".format(EzRMS[sliceX,sliceY]))
     
@@ -358,10 +356,10 @@ def setSliceX(x):
     conditionalRedraw()  
     
 def resetIntensity():
-  global tAveraging
+  global nAveraging
   global EzSQ
   
-  tAveraging = 0
+  nAveraging = 0
   EzSQ = zeros((NEZx, NEZy))
   conditionalRedraw()
       
@@ -371,7 +369,7 @@ def reset():
   global haveRestartedAvg
   global maxY
     
-  t = 0
+  n = 0
   haveRestartedAvg = False
   resetIntensity()
   Ez = zeros((NEZx, NEZy, 3))
@@ -391,10 +389,10 @@ def stop():
   running = False
   
 def fastForward():
-  global tEnd
+  global nEnd
   global fastForwarding
   
-  tEnd = t + tStable
+  nEnd = n + nStable
   fastForwarding = True
   root.after(1,fastForwardStep)
     
@@ -402,12 +400,12 @@ def fastForwardStep():
   global ezPlot
   global fastForwarding
 
-  if t < tEnd:
+  if n < nEnd:
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
     im = Image.new('RGB', (Nx,Ny))
     draw = ImageDraw.Draw(im)
-    draw.text((Nx/3, Ny/3), str(int((tEnd-t)/dt)), font=font, fill='red')
+    draw.text((Nx/3, Ny/3), str(nEnd-n), font=font, fill='red')
     ezPlot = ImageTk.PhotoImage(image=im)
     Ezcanvas.create_image(0,0,image=ezPlot,anchor=Tkinter.NW)
     EzRMScanvas.create_image(0,0,image=ezPlot,anchor=Tkinter.NW)
@@ -426,7 +424,7 @@ def run():
   
   if running:
     timer = time.clock()
-    if t > tStable and not haveRestartedAvg: #todo: clean up reset
+    if n > nStable and not haveRestartedAvg: #todo: clean up reset
       resetIntensity()
       haveRestartedAvg = True
     step()
@@ -439,8 +437,8 @@ def step(avg=True):
   global Ez
   global Hz
   global Hy
-  global t
-  global tAveraging
+  global n
+  global nAveraging
   global EzSQ
   
   #next, take care of Hx and Hy using the standard Yee algorithm
@@ -477,18 +475,18 @@ def step(avg=True):
   Ez[-1,-1,0] = Ez[-2,-2,2] #top right
     
   ##finially, update the time and the sources todo: don't have to update the sources twice?
-  t = t + dt
-  tAveraging = tAveraging + dt
+  n = n + 1
+  nAveraging = nAveraging + 1
 
   #update calculated part of Ez so that it displays correctly
   #the Ez source is the area [0,barrierX]
   #x and y for points on the barrier and to the left
   x, y = d * mgrid[EZx_ex_range, EZy_ex_range]
-  tr = t - x/c  
+  tr = n*dt - x/c  
   
   #want wave to start gradually and propigate at speed of light
   #logistic growth makes it come in gradually and use of retarded time there and in step function at end enforces propigation
-  Ez[EZx_ex_range, EZy_ex_range, 0] = sin(k*x-omega*t)/(1+exp(-(tr-3*tau)/tau))*((tr > 0).astype(float))
+  Ez[EZx_ex_range, EZy_ex_range, 0] = sin(k*x-omega*n*dt)/(1+exp(-(tr-3*tau)/tau))*((tr > 0).astype(float))
 
   #now, enforce Ez=0 on barrier
   invGaps = [ypos for pair in gaps for ypos in pair] #flatten gaps
@@ -501,11 +499,11 @@ def step(avg=True):
   #strictly speaking, the following will blow up to infinity if you integrate forever (since the FT of a sinusoid is a delta function)
   #however, we're not that patient. plus, floating point limitations will prevent it (once the numbers are large enough, adding a small number to them won't change them)
   if avg:
-    EzSQ = EzSQ + square(Ez[:,:,0])*dt
+    EzSQ = EzSQ + square(Ez[:,:,0])
 
 #GLOBAL VARIABLES
-t = 0 #the current time
-tAveraging = 0 #hold the time since averaging started
+n = 0 #the current time step
+nAveraging = 0 #number of time steps average has been running
 running = False #the simulation isn't currently running
 Ez = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of past values of Ez.
 EzSQ = zeros((NEZx, NEZy))
