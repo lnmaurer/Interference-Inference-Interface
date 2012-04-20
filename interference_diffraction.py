@@ -95,6 +95,18 @@ class Interface:
     editmenu.add_command(label="Paste", accelerator="Ctrl+V") #todo: add command
     menubar.add_cascade(label="Edit", menu=editmenu)
   
+    #the simulation menu
+    simmenu = Tkinter.Menu(menubar, tearoff=0)
+    simmenu.add_command(label="Run", accelerator="Ctrl+R", command=self.start)
+    self.root.bind("<Control-r>", lambda arg: self.start())
+    simmenu.add_command(label="Stop", accelerator="Ctrl+S", command=self.stop)
+    self.root.bind("<Control-s>", lambda arg: self.stop())
+    simmenu.add_command(label="Reset Simulation", accelerator="Ctrl+Shift+R", command=self.reset)
+    self.root.bind("<Control-R>", lambda arg: self.reset())
+    simmenu.add_command(label="Reset Average", accelerator="Ctrl+Shift+A", command=self.resetIntensity)
+    self.root.bind("<Shift-A>", lambda arg: self.resetIntensity())
+    menubar.add_cascade(label="Simulation", menu=simmenu)
+    
     self.root.config(menu=menubar)
     
 #The view frame
