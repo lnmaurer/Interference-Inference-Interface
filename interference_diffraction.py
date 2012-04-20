@@ -1,6 +1,5 @@
-import Tkinter, tkFileDialog
-import ttk
-import tkMessageBox
+import Tkinter, tkFileDialog, ttk, tkMessageBox
+import csv
 import time
 import math
 #import numpy as np
@@ -57,6 +56,33 @@ HYx_range = slice(0, NHYx) #all y positions updated using Yee
 HYy_range = slice(0, NHYy) 
 
 #THE METHODS
+def exportData():
+  fileName = tkFileDialog.asksaveasfilename(filetypes=[('CSV','*.csv')], title="Export data as...")
+  if fileName != '': #'' is returned if the user hits cancel
+    writer = csv.writer(open(fileName, "w"))
+    writer.writerow(('x_slice',sliceX))
+    writer.writerow(('y_slice',sliceY))
+    writer.writerow(('t',t))
+    writer.writerow(('time averaging',tAveraging))
+    
+    writer.writerow(('Ez'))
+    row = ['y\\x']
+    row.extend(range(0,Nx))
+    writer.writerow(row)
+    for i, r in enumerate(Ez[:,:,0]):
+      row = [i]
+      row.extend(r)
+      writer.writerow(row)
+      
+    writer.writerow(('Ez_RMS'))
+    row = ['y\\x']
+    row.extend(range(0,Nx))
+    writer.writerow(row)
+    for i, r in enumerate(EzRMS[:,:]):
+      row = [i]
+      row.extend(r)
+      writer.writerow(row)
+  
 def addOpening():
   global gaps
   
@@ -225,7 +251,6 @@ def updateVertPlot():
   plot(draw, x, y, 'yellow')
   #turn plot in to a format the canvas can use  
   vertPlot = ImageTk.PhotoImage(image=im)  
-  
     
 def redrawCanvases():
   global maxRMSY
@@ -402,7 +427,6 @@ def run():
   if running:
     timer = time.clock()
     if t > tStable and not haveRestartedAvg: #todo: clean up reset
-      print "resetting!"
       resetIntensity()
       haveRestartedAvg = True
     step()
@@ -419,22 +443,6 @@ def step(avg=True):
   global tAveraging
   global EzSQ
   
-  #first, handle the Ez source -- area from the barrier left
-  #x and y for points on the barrier and to the left
-  x, y = d * mgrid[EZx_ex_range, EZy_ex_range]
-  tr = t - x/c
-  #want wave to start gradually and propigate at speed of light
-  #logistic growth makes it come in gradually and use of retarded time there and in step function at end enforces propigation
-  Ez[EZx_ex_range, EZy_ex_range, 0] = sin(k*x-omega*t)/(1+exp(-(tr-3*tau)/tau))*((tr > 0).astype(float))
-
-  #now, enforce Ez=0 on barrier
-  invGaps = [ypos for pair in gaps for ypos in pair] #flatten gaps
-  invGaps.insert(0,0) #put zero for the first item
-  invGaps.append(Ny) #put Ny for the last item
-  #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
-  for i in range(0,len(invGaps),2):
-    Ez[barrierX, invGaps[i]:invGaps[i+1], 0] = 0     
-    
   #next, take care of Hx and Hy using the standard Yee algorithm
   Hx[HXx_range, HXy_range] = Hx[HXx_range, HXy_range] + Db*(Ez[HXx_range, HXy_range, 0] - Ez[HXx_range, 1:(NHXy+1), 0]) #HXy_range+1
   Hy[HYx_range, HYy_range] = Hy[HYx_range, HYy_range] + Db*(Ez[1:(NHYx+1), HYy_range, 0] - Ez[HYx_range, HYy_range, 0]) #HYx_range+1
@@ -471,13 +479,24 @@ def step(avg=True):
   ##finially, update the time and the sources todo: don't have to update the sources twice?
   t = t + dt
   tAveraging = tAveraging + dt
+
+  #update calculated part of Ez so that it displays correctly
+  #the Ez source is the area [0,barrierX]
+  #x and y for points on the barrier and to the left
+  x, y = d * mgrid[EZx_ex_range, EZy_ex_range]
+  tr = t - x/c  
+  
+  #want wave to start gradually and propigate at speed of light
+  #logistic growth makes it come in gradually and use of retarded time there and in step function at end enforces propigation
   Ez[EZx_ex_range, EZy_ex_range, 0] = sin(k*x-omega*t)/(1+exp(-(tr-3*tau)/tau))*((tr > 0).astype(float))
+
+  #now, enforce Ez=0 on barrier
   invGaps = [ypos for pair in gaps for ypos in pair] #flatten gaps
   invGaps.insert(0,0) #put zero for the first item
   invGaps.append(Ny) #put Ny for the last item
   #now invGaps looks like [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]
   for i in range(0,len(invGaps),2):
-    Ez[barrierX, invGaps[i]:invGaps[i+1], 0] = 0  
+    Ez[barrierX, invGaps[i]:invGaps[i+1], 0] = 0     
     
   #strictly speaking, the following will blow up to infinity if you integrate forever (since the FT of a sinusoid is a delta function)
   #however, we're not that patient. plus, floating point limitations will prevent it (once the numbers are large enough, adding a small number to them won't change them)
@@ -510,16 +529,19 @@ filemenu = Tkinter.Menu(menubar, tearoff=0)
 #filemenu.add_command(label="Save Experiment As", accelerator="Ctrl+S")
 #filemenu.add_command(label="Load Experiment", accelerator="Ctrl+O")
 #filemenu.add_separator()
+filemenu.add_command(label="Export Data", accelerator="Ctrl+E", command=exportData)
+filemenu.add_separator()
 filemenu.add_command(label="Exit", accelerator="Ctrl+Q", command=root.quit)
 #bind keys to the actions
+root.bind_all('<Control-e>', lambda arg: exportData())
 root.bind_all('<Control-q>', lambda arg: root.quit())
 menubar.add_cascade(label="File", menu=filemenu)
 
 #the edit menu
 editmenu = Tkinter.Menu(menubar, tearoff=0)
-editmenu.add_command(label="Cut", accelerator="Ctrl+X") #todo: add command
-editmenu.add_command(label="Copy", accelerator="Ctrl+C") #todo: add command
-editmenu.add_command(label="Paste", accelerator="Ctrl+V") #todo: add command
+editmenu.add_command(label="Cut", accelerator="Ctrl+X", command=lambda: root.event_generate('<Control-x>'))
+editmenu.add_command(label="Copy", accelerator="Ctrl+C", command=lambda: root.event_generate('<Control-c>'))
+editmenu.add_command(label="Paste", accelerator="Ctrl+V", command=lambda: root.event_generate('<Control-v>'))
 menubar.add_cascade(label="Edit", menu=editmenu)
 
 #the view menu
