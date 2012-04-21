@@ -1,8 +1,7 @@
 import Tkinter, tkFileDialog, ttk, tkMessageBox
-import csv
-import time
-#import numpy as np
-from numpy import *
+import csv #for exporting in CSV
+import time #for testing how long steps take
+from numpy import * #so that we can use numpy.round, which otherwise conflicts with python's built in rounding function
 import numpy
 from PIL import Image, ImageTk, ImageDraw
 
@@ -109,8 +108,8 @@ def redrawBarrierFrame():
   global distStrVars
   
   gaps.sort()
-  for b in barrierFrames:
-    b.destroy() #get rid of old frames
+  for f in barrierFrames:
+    f.destroy() #get rid of old frames
   barrierFrames = []
   strVars       = [] #need to save StringVars or else they get garbage collected
   distStrVars   = [] #holds stringVars that report the distance from the center of the gaps to the slice intersection
@@ -587,6 +586,12 @@ root.bind("<Shift-A>", lambda arg: resetAveraging())
 simmenu.add_command(label="Fast Forward", accelerator="Ctrl+F", command=fastForward)
 root.bind("<Control-f>", lambda arg: fastForward())
 menubar.add_cascade(label="Simulation", menu=simmenu)
+
+#the help menu
+helpmenu = Tkinter.Menu(menubar, tearoff=0)
+helpmenu.add_command(label="Ask if you need help", state="disabled")
+helpmenu.add_command(label="About", command=lambda: tkMessageBox.showinfo("About", "Leon's New Fangled Interference & Diffraction Simulator\n\nCopyright 2012 by Leon Maurer\n\nCode available under GNU Public License Version 2"))
+menubar.add_cascade(label="Help", menu=helpmenu)
 
 root.config(menu=menubar)
 
