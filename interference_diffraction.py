@@ -300,7 +300,13 @@ def redrawCanvases():
   for i in range(0,len(invGaps),2):
     Ezcanvas.create_line([(barrierX,invGaps[i]),(barrierX,invGaps[i+1])], width=1, fill='red')    
     EzRMScanvas.create_line([(barrierX,invGaps[i]),(barrierX,invGaps[i+1])], width=1, fill='red')
-      
+  
+  #draw lines from the center of the gaps to the slice intersection, if desired
+  if distLineSetting.get() == "lines":
+    for gap in gaps:
+      Ezcanvas.create_line([(barrierX,(gap[0]+gap[1])/2),(sliceX,sliceY)], width=1, fill='orange', dash='.')
+      EzRMScanvas.create_line([(barrierX,(gap[0]+gap[1])/2),(sliceX,sliceY)], width=1, fill='orange', dash='.')
+  
   #now, draw the horizontal slice
   lineID = Ezcanvas.create_line([(0,sliceY),(Nx,sliceY)], width=1, fill='yellow', dash='-') 
   Ezcanvas.tag_bind(lineID, "<Button-1>",  horizClickMethod)
@@ -318,7 +324,7 @@ def redrawCanvases():
   EzRMScanvas.tag_bind(lineID, "<Button-1>",  vertClickMethod)
   lineID = HorizPlotCanvas.create_line([(sliceX,0),(sliceX,plotD)], width=1, fill='blue', dash='-')
   HorizPlotCanvas.tag_bind(lineID, "<Button-1>",  vertClickMethod)
-    
+      
   #finially, show the current information about the slice intersection point
   tStringVar.set("t=" + str(n) + "dt")
   EzStringVar.set("Ez={:+.4f}".format(Ez[sliceX,sliceY,0]))
@@ -554,6 +560,10 @@ viewmenu.add_radiobutton(label="Displayed Average:", state="disabled")
 viewmenu.add_radiobutton(label="Amplitude", variable=avgSetting, value="amp", command=conditionalRedraw)
 viewmenu.add_radiobutton(label="Ez_rms", variable=avgSetting, value="rms", command=conditionalRedraw)
 viewmenu.add_radiobutton(label="Ez_rms^2", variable=avgSetting, value="sq", command=conditionalRedraw)
+
+viewmenu.add_separator()
+distLineSetting = Tkinter.StringVar(value="lines")
+viewmenu.add_checkbutton(label="Gap to slice lines", variable=distLineSetting, onvalue="lines", offvalue="nolines", command=conditionalRedraw)
 menubar.add_cascade(label="View", menu=viewmenu)
 
 #the simulation menu
