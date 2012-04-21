@@ -6,7 +6,7 @@ from numpy import *
 import numpy
 from PIL import Image, ImageTk, ImageDraw, ImageFont
 
-#CONSTANTS
+#CONSTANTS---------------------------------------------------------------------
 mu0      = 1.2566370614e-6    #Vacuum permeability
 epsilon0 = 8.854187817620e-12 # Vacuum permittivity
 c        = 1/(mu0*epsilon0)**0.5
@@ -31,6 +31,11 @@ tau   = lamb/c		#time period
 #Yee algorithm update coefficients
 Db = dt/mu0/d
 Cb = dt/epsilon0/d
+
+#Mur RBC update coefficients
+Ma = (c*dt - d)/(c*dt + d)
+Mb = 2*d/(c*dt + d)
+Mc = (c*dt)**2/2/d/(c*dt + d)
   
 NEZx = Nx #number of Ez grid points in x direction -- goes all the way to the edge
 NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the edge
@@ -54,7 +59,7 @@ NHYy = Ny     #Hy goes all the way to y endpoints
 HYx_range = slice(0, NHYx) #all y positions updated using Yee
 HYy_range = slice(0, NHYy) 
 
-#THE METHODS
+#THE METHODS-------------------------------------------------------------------
 def exportData():
   fileName = tkFileDialog.asksaveasfilename(filetypes=[('CSV','*.csv')], title="Export data as...")
   if fileName != '': #'' is returned if the user hits cancel
@@ -447,9 +452,6 @@ def step(avg=True):
   Ez[EZx_range, EZy_range, 0] = Ez[EZx_range, EZy_range, 1] + Cb*(Hy[EZx_range, EZy_range] - Hy[barrierX:(NEZx-2),EZy_range] + Hx[EZx_range, 0:NEZy-2] - Hx[EZx_range, EZy_range])
     
   ##now take care of the Mur RBCs
-  Ma = (c*dt - d)/(c*dt + d)
-  Mb = 2*d/(c*dt + d)
-  Mc = (c*dt)**2/2/d/(c*dt + d)
   ##for x=NEZx-1
   rng   = slice(1,NEZy-1) #range of everything in y except the corners
   rngp1 = slice(2,NEZy)
@@ -469,7 +471,7 @@ def step(avg=True):
   Ez[-1,0,0] = Ez[-2,1,2] #bottom right
   Ez[-1,-1,0] = Ez[-2,-2,2] #top right
     
-  ##finially, update the time and the sources todo: don't have to update the sources twice?
+  ##finially, update the time and the sources
   n = n + 1
   nAveraging = nAveraging + 1
 
@@ -496,7 +498,7 @@ def step(avg=True):
   if avg:
     EzSQ = EzSQ + square(Ez[:,:,0])
 
-#GLOBAL VARIABLES
+#GLOBAL VARIABLES--------------------------------------------------------------
 n = 0 #the current time step
 nAveraging = 0 #number of time steps average has been running
 running = False #the simulation isn't currently running
@@ -508,7 +510,7 @@ maxY = 1 #contains the largest Ez seen
 font = ImageFont.truetype("BebasNeue.otf", 90)
 fastForwarding = False
 
-#THE GUI
+#THE GUI-----------------------------------------------------------------------
 #The root window
 root = Tkinter.Tk()
 root.title("Leon's New Fangled Interference & Diffraction Simulator")
@@ -593,7 +595,7 @@ VertPlotCanvas1.grid(column=3, row=0, columnspan=1, rowspan=3, sticky='nsew', pa
 VertPlotCanvas2 = Tkinter.Canvas(viewFrame, width=plotD, height=Ny)
 VertPlotCanvas2.grid(column=3, row=8, columnspan=1, rowspan=3, sticky='nsew', padx=5, pady=5)
 
-sliceY = 60 #position of horizontal slice todo: put in middle, set to 60 for testing
+sliceY = 60 #position of horizontal slice
 sliceX = Nx/2
 
 EzRMScanvas = Tkinter.Canvas(viewFrame, width=Nx, height=Ny)
@@ -629,6 +631,7 @@ barrierFrames = []
 redrawBarrierFrame()
 
 #almost done
-redrawCanvases();    
+redrawCanvases();
+
 #set everything in motion
 root.mainloop()
