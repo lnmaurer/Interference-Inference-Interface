@@ -4,7 +4,7 @@ import time
 #import numpy as np
 from numpy import *
 import numpy
-from PIL import Image, ImageTk, ImageDraw, ImageFont
+from PIL import Image, ImageTk, ImageDraw
 
 #CONSTANTS---------------------------------------------------------------------
 mu0      = 1.2566370614e-6    #Vacuum permeability
@@ -206,9 +206,6 @@ def updateEzRMSPlot():
   else: #want to display Ez_RMS
     data = 256*(float32(transpose(EzRMS)/maxRMSY))    
   im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
-  if n <= nStable and running: #if we haven't reached steady state yet, display a countdown with the number of steps until stability
-    draw = ImageDraw.Draw(im)
-    draw.text((Nx/3, Ny/3), str(nStable - n), font=font, fill=255.0)
   ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
 def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
@@ -283,7 +280,8 @@ def redrawCanvases():
   tempMaxY = numpy.max(abs(Ez))
   if tempMaxY > maxY:
     maxY = tempMaxY
-    
+  
+  #now, put the plots on the canvases
   updateEzPlot()
   Ezcanvas.create_image(0,0,image=ezPlot,anchor=Tkinter.NW)
   updateHorizPlot()
@@ -294,7 +292,7 @@ def redrawCanvases():
   updateVertPlot()
   VertPlotCanvas1.create_image(0,0,image=vertPlot,anchor=Tkinter.NW)  
   VertPlotCanvas2.create_image(0,0,image=vertPlot,anchor=Tkinter.NW)  
-    
+  
   #next, draw the barrier
   invGaps = invertedGaps()
   for i in range(0,len(invGaps),2):
@@ -303,9 +301,16 @@ def redrawCanvases():
   
   #draw lines from the center of the gaps to the slice intersection, if desired
   if distLineSetting.get() == "lines":
-    for gap in gaps:
-      Ezcanvas.create_line([(barrierX,(gap[0]+gap[1])/2),(sliceX,sliceY)], width=1, fill='orange', dash='.')
-      EzRMScanvas.create_line([(barrierX,(gap[0]+gap[1])/2),(sliceX,sliceY)], width=1, fill='orange', dash='.')
+    for gap, distStrVar in zip(gaps,distStrVars):
+      #draw the lines
+      yGap = (gap[0]+gap[1])/2
+      Ezcanvas.create_line([(barrierX,yGap),(sliceX,sliceY)], width=1, fill='orange', dash='.')
+      EzRMScanvas.create_line([(barrierX,yGap),(sliceX,sliceY)], width=1, fill='orange', dash='.')
+      #draw text showing the distances
+      yText = (yGap + sliceY)/2
+      xText = (barrierX+sliceX)/2
+      Ezcanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("system", "12"))
+      EzRMScanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("system", "12"))
   
   #now, draw the horizontal slice
   lineID = Ezcanvas.create_line([(0,sliceY),(Nx,sliceY)], width=1, fill='yellow', dash='-') 
@@ -324,7 +329,12 @@ def redrawCanvases():
   EzRMScanvas.tag_bind(lineID, "<Button-1>",  vertClickMethod)
   lineID = HorizPlotCanvas.create_line([(sliceX,0),(sliceX,plotD)], width=1, fill='blue', dash='-')
   HorizPlotCanvas.tag_bind(lineID, "<Button-1>",  vertClickMethod)
-      
+ 
+  #if we haven't reached steady state yet, display a countdown with the number of steps until stability on EzRMScanvas
+  #this is drawn last so that it's on top of everything
+  if n <= nStable and running:
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nStable-n), fill="Red", font=("system", "75"))
+ 
   #finially, show the current information about the slice intersection point
   tStringVar.set("t=" + str(n) + "dt")
   EzStringVar.set("Ez={:+.4f}".format(Ez[sliceX,sliceY,0]))
@@ -340,6 +350,7 @@ def horizDragMethod(eventObj):
   setSliceY(eventObj.y)
 
 def conditionalRedraw():
+  """In many cases, we want to redraw the canvas because something has changed. However, if it's running, the canvas will be redrawn soon anyway, so we don't need to do an extra redraw."""
   if not running:
     redrawCanvases()
       
@@ -369,7 +380,7 @@ def setSliceX(x):
     updateDistStrVars()
     conditionalRedraw()  
     
-def resetIntensity():
+def resetAveraging():
   global nAveraging
   global EzSQ
   
@@ -383,7 +394,7 @@ def reset():
   global maxY
     
   n = 0
-  resetIntensity()
+  resetAveraging()
   Ez = zeros((NEZx, NEZy, 3))
   maxY = 1.0
   conditionalRedraw()
@@ -413,19 +424,16 @@ def fastForwardStep():
   global fastForwarding
 
   if n <= nEnd:
+    #clear canvases and display countdown
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
-    im = Image.new('RGB', (Nx,Ny))
-    draw = ImageDraw.Draw(im)
-    draw.text((Nx/3, Ny/3), str(nEnd-n), font=font, fill='red')
-    ezPlot = ImageTk.PhotoImage(image=im)
-    Ezcanvas.create_image(0,0,image=ezPlot,anchor=Tkinter.NW)
-    EzRMScanvas.create_image(0,0,image=ezPlot,anchor=Tkinter.NW)
-    step(avg=False)
+    Ezcanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
+    step(avg=False) #don't bother updating the averaging, since we're just ging to reset it after fast forwarding
     root.after(1,fastForwardStep)
   else: #stop fast forwarding
     fastForwarding = False
-    resetIntensity()
+    resetAveraging()
     if running:
       run()
     else:
@@ -435,7 +443,7 @@ def run():
   if running:
     timer = time.clock()
     if n == nStable:
-      resetIntensity()
+      resetAveraging()
     step()
     redrawCanvases()
     print str(time.clock()-timer)
@@ -516,7 +524,6 @@ EzSQ = zeros((NEZx, NEZy))
 Hx = zeros((NHXx, NHXy))
 Hy = zeros((NHYx, NHYy))
 maxY = 1 #contains the largest Ez seen
-font = ImageFont.truetype("BebasNeue.otf", 90)
 fastForwarding = False
 
 #THE GUI-----------------------------------------------------------------------
@@ -563,7 +570,8 @@ viewmenu.add_radiobutton(label="Ez_rms^2", variable=avgSetting, value="sq", comm
 
 viewmenu.add_separator()
 distLineSetting = Tkinter.StringVar(value="lines")
-viewmenu.add_checkbutton(label="Gap to slice lines", variable=distLineSetting, onvalue="lines", offvalue="nolines", command=conditionalRedraw)
+viewmenu.add_checkbutton(label="Gap to slice lines", accelerator="Ctrl+D", variable=distLineSetting, onvalue="lines", offvalue="nolines", command=conditionalRedraw)
+root.bind_all('<Control-d>', lambda arg: conditionalRedraw())
 menubar.add_cascade(label="View", menu=viewmenu)
 
 #the simulation menu
@@ -574,8 +582,8 @@ simmenu.add_command(label="Stop", accelerator="Ctrl+S", command=stop)
 root.bind("<Control-s>", lambda arg: stop())
 simmenu.add_command(label="Reset Simulation", accelerator="Ctrl+Shift+R", command=reset)
 root.bind("<Control-R>", lambda arg: reset())
-simmenu.add_command(label="Reset Average", accelerator="Ctrl+Shift+A", command=resetIntensity)
-root.bind("<Shift-A>", lambda arg: resetIntensity())
+simmenu.add_command(label="Reset Average", accelerator="Ctrl+Shift+A", command=resetAveraging)
+root.bind("<Shift-A>", lambda arg: resetAveraging())
 simmenu.add_command(label="Fast Forward", accelerator="Ctrl+F", command=fastForward)
 root.bind("<Control-f>", lambda arg: fastForward())
 menubar.add_cascade(label="Simulation", menu=simmenu)
