@@ -349,7 +349,7 @@ def horizDragMethod(eventObj):
 
 def conditionalRedraw():
   """In many cases, we want to redraw the canvas because something has changed. However, if it's running, the canvas will be redrawn soon anyway, so we don't need to do an extra redraw."""
-  if not running:
+  if not running and not fastForwarding:
     redrawCanvases()
       
 def setSliceY(y):
@@ -420,20 +420,22 @@ def stop():
 def fastForward():
   global nCount
   global fastForwarding
-  global fastForwardWithAvg
   
   fastForwarding = True
   if nCount < n: #we've already reached stability, so now we're fast forwarding to get good averaging
-    fastForwardWithAvg = True
-  else:
-    fastForwardWithAvg = False
-  root.after(1,fastForwardStep)
+    root.after(1,lambda: fastForwardStep(True))
+  else: #we're fast forwarding to get Ez stability
+    root.after(1,lambda: fastForwardStep(False))
+
     
-def fastForwardStep():
+def fastForwardStep(fastForwardWithAvg):
   global ezPlot
   global fastForwarding
 
-  if (fastForwardWithAvg and nAveraging < nAvgStable) or n <= nCount:
+  #if n<=nCount, then Ez is unstable and we want to run until Ez is stable
+  #if we're in fastForwardWithAvg mode, then we're running until EzRMS and EzRMSSQ are stable
+  #so we run until nAveraging == nAvgStable
+  if n <= nCount or (fastForwardWithAvg and nAveraging < nAvgStable):
     #clear canvases and display countdown
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
@@ -444,7 +446,7 @@ def fastForwardStep():
       Ezcanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75")) 
       EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75")) 
     step(avg=fastForwardWithAvg) #only average if we're not going to reset right after we're done fast forwarding
-    root.after(1,fastForwardStep)
+    root.after(1,lambda: fastForwardStep(fastForwardWithAvg))
   else: #stop fast forwarding
     fastForwarding = False
     if not fastForwardWithAvg:
@@ -550,17 +552,20 @@ def step(avg=True):
 #GLOBAL VARIABLES--------------------------------------------------------------
 n = 0 #the current time step
 nAveraging = 0 #number of time steps average has been running
-running = False #the simulation isn't currently running
-Ez = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
-EzSQsum = zeros((NEZx, NEZy)) #sum of Ez^2
-EzRMSSQ = zeros((NEZx, NEZy))
-EzRMS   = zeros((NEZx, NEZy))
-Hx = zeros((NHXx, NHXy))
-Hy = zeros((NHYx, NHYy))
-maxEz    = 1 #contains the largest Ez seen
-maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one just so it doesn't start at zero
-fastForwarding = False
-nCount = nStable #number of steps stability will be reached at
+nCount = nStable #nCount stores whatever time step we're counting to. Here, its when stability will be reached
+
+running        = False #stores whether or not the simulation is currently running
+fastForwarding = False #stores whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
+
+Ez      = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
+EzSQsum = zeros((NEZx, NEZy)) #sum of 'Ez^2's at each timestep we've averaged over
+EzRMSSQ = zeros((NEZx, NEZy)) #Ez_RMS^2
+EzRMS   = zeros((NEZx, NEZy)) #Ez_RMS
+Hx      = zeros((NHXx, NHXy)) #Hx
+Hy      = zeros((NHYx, NHYy)) #Hy
+
+maxEz    = 1 #contains the largest Ez seen >=1
+maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one to avoid divide by zero problems on the first canvas refresh
 
 #THE GUI-----------------------------------------------------------------------
 #The root window
