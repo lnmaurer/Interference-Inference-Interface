@@ -639,7 +639,7 @@ root.bind("<Down>", lambda arg: setSliceY(sliceY+1))
 root.bind("<Right>", lambda arg: setSliceX(sliceX+1))
 root.bind("<Left>", lambda arg: setSliceX(sliceX-1))
 
-#The barrier frame frame and intial barrier setup
+#The barrier frame and intial barrier setup
 barrierFrame = ttk.Labelframe(root, text='Barrier')
 barrierFrame.grid(column=1,row=0,sticky='nsew',padx=5,pady=5)
 
