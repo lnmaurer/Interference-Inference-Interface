@@ -1,8 +1,8 @@
 import Tkinter, tkFileDialog, ttk, tkMessageBox
 import csv #for exporting in CSV
 import time #for testing how long steps take
-from numpy import * #so that we can use numpy.round, which otherwise conflicts with python's built in rounding function
-import numpy
+from numpy import * #so that we don't have to have 'numpy.'s everywhere
+import numpy #so that we can use numpy.round, which otherwise conflicts with python's built in rounding function
 from PIL import Image, ImageTk, ImageDraw
 
 #CONSTANTS---------------------------------------------------------------------
@@ -16,7 +16,7 @@ barrierX = 100 #x position of the barrier
   
 plotD = 100 #dimension of plot
   
-d  = 2.0/Nx #spatial grid element size
+d  = 2.0/(Nx-1) #spatial grid element size
 dt = d/c/2**0.5 #time step -- this choice is good for a 2D simulation in vacuum
 
 #the wave:
@@ -70,27 +70,34 @@ def exportData():
     writer.writerow(('time steps',n))
     writer.writerow(('time steps averaged',nAveraging))
     
-    writer.writerow(('Ez'))
-    row = ['y\\x']
-    row.extend(range(0,Nx))
+    writer.writerow(('Ez','')) #need the '' or else it will split up 'Ez_RMS^2'???
+    row = ['x\\y']
+    row.extend(range(0,Ny))
     writer.writerow(row)
     for i, r in enumerate(Ez[:,:,0]):
       row = [i]
       row.extend(r)
       writer.writerow(row)
       
-    writer.writerow(('Ez_RMS'))
-    row = ['y\\x']
-    row.extend(range(0,Nx))
+    writer.writerow(('Ez_RMS^2','')) #need the '' or else it will split up 'Ez_RMS^2'???
+    row = ['x\\y']
+    row.extend(range(0,Ny))
     writer.writerow(row)
     for i, r in enumerate(EzRMS[:,:]):
       row = [i]
       row.extend(r)
       writer.writerow(row)
+
+def barrierChanged():
+  global nCount
+  global maxEz
   
+  maxEz = 1
+  nCount = n + nStable
+  conditionalRedraw()
+      
 def addOpening():
   global gaps
-  global nEnd
   
   bot = int(bottomEntry.get())
   top = int(topEntry.get())
@@ -102,9 +109,8 @@ def addOpening():
     if (newOrderFlat == sorted(newOrderFlat) #catches things like [50,100],[90,120] -- overlapping openings
       and len(list(set(newOrderFlat))) == len(newOrderFlat)): #catchs things like [50,100],[100,120] -- openings with no space between them
       gaps = newOrder
-      nEnd = n + nStable
       redrawBarrierFrame()
-      conditionalRedraw()
+      barrierChanged()
   
 def redrawBarrierFrame():
   global barrierFrames
@@ -150,25 +156,21 @@ def redrawBarrierFrame():
       
 def updateBarrierTop(barrierNumber, intVar):
   global gaps
-  global nEnd
   
   value = intVar.get()
   if ((barrierNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((barrierNumber < (len(gaps)-1)) and (value < gaps[barrierNumber+1][0]) and (value > gaps[barrierNumber][0])):
     gaps[barrierNumber][1] = value
-    nEnd = n + nStable
-    conditionalRedraw()
+    barrierChanged()
   else:
     intVar.set(gaps[barrierNumber][1])
 
 def updateBarrierBottom(barrierNumber, intVar):
   global gaps
-  global nEnd
 
   value = intVar.get()
   if ((barrierNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((barrierNumber > 0) and (value > gaps[barrierNumber-1][1]) and (value < gaps[barrierNumber][1])):
     gaps[barrierNumber][0] = value
-    nEnd = n + nStable
-    conditionalRedraw()
+    barrierChanged()
   else:
     intVar.set(gaps[barrierNumber][0])    
   
@@ -185,12 +187,10 @@ def invertedGaps():
   
 def removeBarrier(barrierNumber):
   global gaps
-  global nEnd
 
   del gaps[barrierNumber]
-  nEnd = n + nStable
   redrawBarrierFrame()
-  conditionalRedraw()
+  barrierChanged()
     
 def clearCanvasBindings(eventObj):
   Ezcanvas.bind("<B1-Motion>", lambda e: None)
@@ -203,7 +203,7 @@ def updateEzPlot():
   #1)Image.fromstring can only handle 32bit floats, so need to do that conversion
   #2)0 (and below) are black, 255 and above are white, shades of gray inbetween
   #3)need to store array in (height, width) format
-  data = float32((transpose(Ez[:,:,0])/maxY + 1)/2*256) #+1 so that zero is in the center
+  data = float32((transpose(Ez[:,:,0])/maxEz + 1)/2*256) #+1 so that zero is in the center
   im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
   ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
     
@@ -211,22 +211,22 @@ def updateEzRMSPlot():
   global ezRMSPlot
   
   if avgSetting.get() == 'sq': #want to display Ez_RMS^2
-    data = 256*(float32(transpose(EzSQ)/nAveraging/maxRMSY**2))  
+    data = 256*(float32(transpose(EzRMSSQ)/maxEzRMS**2))  
   else: #want to display Ez_RMS
-    data = 256*(float32(transpose(EzRMS)/maxRMSY))    
+    data = 256*(float32(transpose(EzRMS/maxEzRMS)))    
   im = Image.fromstring('F', (data.shape[1], data.shape[0]), data.tostring())
   ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
 def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
   if avgSetting.get() == 'amp': #want to display amplitude = EzRMS*sqrt(2) with zero in middle of plot
-    v = int_(numpy.round((1+EzRMS[xS,yS]*sqrt(2)/maxY)*(plotD/2)))
+    v = int_(numpy.round((1+(EzRMS[xS,yS]*sqrt(2))/maxEz)*(plotD/2)))
     if othercoord != None: #in this case, let's plot +/-amplitude, not just amplitude
       othercoord.extend(othercoord[::-1]) #extend the coordinates so they're like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0]
       v = concatenate((v,100-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
   elif avgSetting.get() == 'rms': #want to display EzRMS with zero at bottom of plot
-    v = int_(numpy.round((EzRMS[xS,yS]/maxRMSY)*(plotD-1)))
+    v = int_(numpy.round((EzRMS[xS,yS]/maxEzRMS)*(plotD-1)))
   else: #want to display EzRMS^2 with zero at bottom of plot
-    v = int_(numpy.round((EzSQ[xS,yS]/nAveraging/maxRMSY**2)*(plotD-1)))
+    v = int_(numpy.round((EzRMSSQ[xS,yS]/maxEzRMS**2)*(plotD-1)))
     
   if invert: #mirror results across axis
     v = plotD - v
@@ -249,7 +249,7 @@ def updateHorizPlot():
   y = makeAvgedTrace(EZx_all, sliceY, invert=True, othercoord=x)
   plot(draw, x, y, 'green')
   #plot Ez
-  y = int_(numpy.round((-Ez[:,sliceY,0]/maxY+1)*(plotD/2)))
+  y = int_(numpy.round((-Ez[:,sliceY,0]/maxEz+1)*(plotD/2)))
   plot(draw, x, y, 'yellow')
   #turn plot in to a format the canvas can use
   horizPlot = ImageTk.PhotoImage(image=im)
@@ -264,31 +264,18 @@ def updateVertPlot():
   x = makeAvgedTrace(sliceX, EZy_all, othercoord=y)
   plot(draw, x, y, 'green')
   #plot Ez
-  x = int_(numpy.round((Ez[sliceX,:,0]/maxY+1)*(plotD/2)))
+  x = int_(numpy.round((Ez[sliceX,:,0]/maxEz+1)*(plotD/2)))
   plot(draw, x, y, 'yellow')
   #turn plot in to a format the canvas can use  
   vertPlot = ImageTk.PhotoImage(image=im)  
     
-def redrawCanvases():
-  global maxRMSY
-  global maxY
-  global EzRMS
-    
+def redrawCanvases():  
   #first, clear everything off the canvases (but don't delete the canvases themselves)
   Ezcanvas.delete('all')
   HorizPlotCanvas.delete('all')
   EzRMScanvas.delete('all')
   VertPlotCanvas1.delete('all')
   VertPlotCanvas2.delete('all')
-    
-  EzRMS = sqrt(EzSQ/(nAveraging+1e-24))
-  maxRMSY = numpy.max(EzRMS)
-  if maxRMSY == 0:
-    maxRMSY = 1
-
-  tempMaxY = numpy.max(abs(Ez))
-  if tempMaxY > maxY:
-    maxY = tempMaxY
   
   #now, put the plots on the canvases
   updateEzPlot()
@@ -341,8 +328,8 @@ def redrawCanvases():
  
   #if we haven't reached steady state yet, display a countdown with the number of steps until stability on EzRMScanvas
   #this is drawn last so that it's on top of everything
-  if n <= nEnd:
-    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75"))
+  if n <= nCount:
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75"))
   elif nAveraging < nAvgStable:
     EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75"))
  
@@ -393,10 +380,10 @@ def setSliceX(x):
     
 def resetAveraging():
   global nAveraging
-  global EzSQ
+  global EzSQsum
   
   nAveraging = 0
-  EzSQ = zeros((NEZx, NEZy))
+  EzSQsum = zeros((NEZx, NEZy))
   conditionalRedraw()
       
 def reset():
@@ -405,17 +392,17 @@ def reset():
   global Hx
   global Hy
   global t
-  global maxY
-  global nEnd
+  global maxEz
+  global nCount
   global running
   
   running = False
   Hx = zeros((NHXx, NHXy))
   Hy = zeros((NHYx, NHYy))
   n = 0
-  nEnd = nStable
+  nCount = nStable
   Ez = zeros((NEZx, NEZy, 3))
-  maxY = 1.0
+  maxEz = 1.0
   resetAveraging() #contains a conditionalRedraw()
   
 def start():
@@ -431,12 +418,12 @@ def stop():
   running = False
   
 def fastForward():
-  global nEnd
+  global nCount
   global fastForwarding
   global fastForwardWithAvg
   
   fastForwarding = True
-  if nEnd < n: #we've already reached stability, so now we're fast forwarding to get good averaging
+  if nCount < n: #we've already reached stability, so now we're fast forwarding to get good averaging
     fastForwardWithAvg = True
   else:
     fastForwardWithAvg = False
@@ -446,7 +433,7 @@ def fastForwardStep():
   global ezPlot
   global fastForwarding
 
-  if (fastForwardWithAvg and nAveraging < nAvgStable) or n <= nEnd:
+  if (fastForwardWithAvg and nAveraging < nAvgStable) or n <= nCount:
     #clear canvases and display countdown
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
@@ -454,8 +441,8 @@ def fastForwardStep():
       Ezcanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75")) 
       EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75"))       
     else:
-      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
-      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
+      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75")) 
+      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75")) 
     step(avg=fastForwardWithAvg) #only average if we're not going to reset right after we're done fast forwarding
     root.after(1,fastForwardStep)
   else: #stop fast forwarding
@@ -470,7 +457,7 @@ def fastForwardStep():
 def run():
   if running:
     timer = time.clock()
-    if n == nEnd:
+    if n == nCount:
       resetAveraging()
     step()
     redrawCanvases()
@@ -484,7 +471,11 @@ def step(avg=True):
   global Hy
   global n
   global nAveraging
-  global EzSQ
+  global EzSQsum
+  global EzRMSSQ
+  global EzRMS
+  global maxEzRMS
+  global maxEz
   
   #take care of Hx and Hy using the standard Yee algorithm
   Hx[HXx_range, HXy_range] = Hx[HXx_range, HXy_range] + Db*(Ez[HXx_range, HXy_range, 0] - Ez[HXx_range, 1:(NHXy+1), 0]) #HXy_range+1
@@ -539,22 +530,37 @@ def step(avg=True):
     
   #first, only average if avg is true
   #2nd, stop averaging once we've got enough points (i.e. after nAveraging == nAvgStable)
-  #however, if Ez still isn't stable (i.e. n < nEnd) then keep averaging anyway
-  if avg and (nAveraging < nAvgStable or n < nEnd):
+  #however, if Ez still isn't stable (i.e. n < nCount) then keep averaging anyway
+  if avg and (nAveraging < nAvgStable or n < nCount):
     nAveraging += 1
-    EzSQ += square(Ez[:,:,0])
+    EzSQsum += square(Ez[:,:,0])
+    
+    EzRMSSQ = EzSQsum/nAveraging
+    EzRMS   = sqrt(EzRMSSQ)
+    
+    maxEzRMS = numpy.max(EzRMS)
+    if maxEzRMS == 0:
+      maxEzRMS = 1
 
+  #because Ez oscillates, it's maximum will change a little in time, so we store it and update it if we find something larger
+  tempMaxEz = numpy.max(abs(Ez))
+  if tempMaxEz > maxEz:
+    maxEz = tempMaxEz
+      
 #GLOBAL VARIABLES--------------------------------------------------------------
 n = 0 #the current time step
 nAveraging = 0 #number of time steps average has been running
 running = False #the simulation isn't currently running
 Ez = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
-EzSQ = zeros((NEZx, NEZy))
+EzSQsum = zeros((NEZx, NEZy)) #sum of Ez^2
+EzRMSSQ = zeros((NEZx, NEZy))
+EzRMS   = zeros((NEZx, NEZy))
 Hx = zeros((NHXx, NHXy))
 Hy = zeros((NHYx, NHYy))
-maxY = 1 #contains the largest Ez seen
+maxEz    = 1 #contains the largest Ez seen
+maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one just so it doesn't start at zero
 fastForwarding = False
-nEnd = nStable #number of steps stability will be reached at
+nCount = nStable #number of steps stability will be reached at
 
 #THE GUI-----------------------------------------------------------------------
 #The root window
@@ -684,10 +690,9 @@ topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
 gaps = [[50,70],[230,250]]
 barrierFrames = []
 
+#draw on the canvases and set up the barrier frame
 redrawBarrierFrame()
-
-#almost done
-redrawCanvases();
+redrawCanvases()
 
 #set everything in motion
 root.mainloop()
