@@ -132,7 +132,7 @@ def addOpening():
   bot = int(bottomEntry.get())
   top = int(topEntry.get())
   if bot > 0 and top < Ny and bot < top: #some initial checks that top and bot better pass
-    newOrder = gaps[:]
+    newOrder = gaps[:] #copy gaps, don't just point to it
     newOrder.append([bot,top])
     newOrder.sort()
     newOrderFlat = [ypos for pair in newOrder for ypos in pair] #flatten
@@ -190,22 +190,28 @@ def updateBarrierTop(openingNumber, intVar):
   global gaps
   
   value = intVar.get()
-  if ((openingNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((openingNumber < (len(gaps)-1)) and (value < gaps[openingNumber+1][0]) and (value > gaps[openingNumber][0])):
-    gaps[openingNumber][1] = value
-    barrierChanged()
+  if not gaps[openingNumber][1] == value: #don't do anything if nothing has changed
+    if ((openingNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((openingNumber < (len(gaps)-1)) and (value < gaps[openingNumber+1][0]) and (value > gaps[openingNumber][0])):
+      gaps[openingNumber][1] = value
+      barrierChanged()
+    else:
+      intVar.set(gaps[openingNumber][1])
   else:
-    intVar.set(gaps[openingNumber][1])
+    root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
 
 def updateBarrierBottom(openingNumber, intVar):
   """Changes the bottom end of barrier number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
 
   value = intVar.get()
-  if ((openingNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((openingNumber > 0) and (value > gaps[openingNumber-1][1]) and (value < gaps[openingNumber][1])):
-    gaps[openingNumber][0] = value
-    barrierChanged()
+  if not gaps[openingNumber][0] == value: #don't do anything if nothing has changed
+    if ((openingNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((openingNumber > 0) and (value > gaps[openingNumber-1][1]) and (value < gaps[openingNumber][1])):
+      gaps[openingNumber][0] = value
+      barrierChanged()
+    else:
+      intVar.set(gaps[openingNumber][0])   
   else:
-    intVar.set(gaps[openingNumber][0])    
+    root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
   
 def updateDistStrVars():
   """Updates all the StringVars in distStrVars to hold the correct distance from the gap to the slice intersection"""
@@ -731,9 +737,11 @@ barrierFrame.grid(column=1,row=0,sticky='nsew',padx=5,pady=5)
 ttk.Button(barrierFrame, text='Add Opening', command=addOpening).grid(column=0, row=0, columnspan=2, sticky='nsew', padx=5, pady=5)
 ttk.Label(barrierFrame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
 bottomEntry = Tkinter.Spinbox(barrierFrame, width=4, from_=0, to=Nx)
+bottomEntry.bind("<Return>",lambda arg: root.focus()) #removes focus after the number is entered
 bottomEntry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
 ttk.Label(barrierFrame, text="Top:").grid(column=0, row=2, sticky='nes', padx=5, pady=5)
 topEntry = Tkinter.Spinbox(barrierFrame, width=4, from_=0, to=Nx)
+topEntry.bind("<Return>",lambda arg: root.focus()) #removes focus after the number is entered
 topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
 
 gaps = [[50,70],[230,250]] #good for standard double slit experiment
