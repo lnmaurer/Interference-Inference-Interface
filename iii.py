@@ -123,14 +123,14 @@ def redrawBarrierFrame():
     top = Tkinter.IntVar()
     bottom = Tkinter.IntVar()
     distStrVar = Tkinter.StringVar()
-    ttk.Label(frame, text="Top:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
+    ttk.Label(frame, text="Bottom:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
     #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=bn, tv=top: updateBarrierTop(n,tv))
-    entry.bind("<Return>",lambda arg, n=bn, tv=top: updateBarrierTop(n,tv))
-    entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
-    ttk.Label(frame, text="Bottom:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
     entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=bn, tv=bottom: updateBarrierBottom(n,tv))
     entry.bind("<Return>",lambda arg, n=bn, tv=bottom: updateBarrierBottom(n,tv))
+    entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
+    ttk.Label(frame, text="Top:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
+    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=bn, tv=top: updateBarrierTop(n,tv))
+    entry.bind("<Return>",lambda arg, n=bn, tv=top: updateBarrierTop(n,tv))
     entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, textvariable=distStrVar).grid(column=0, row=2, sticky='nes', padx=5, pady=5)
     ttk.Button(frame, text='Remove', command=lambda n=bn: removeBarrier(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
@@ -518,7 +518,7 @@ def step(avg=True):
 n = 0 #the current time step
 nAveraging = 0 #number of time steps average has been running
 running = False #the simulation isn't currently running
-Ez = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of past values of Ez.
+Ez = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
 EzSQ = zeros((NEZx, NEZy))
 Hx = zeros((NHXx, NHXy))
 Hy = zeros((NHYx, NHYy))
@@ -528,7 +528,7 @@ fastForwarding = False
 #THE GUI-----------------------------------------------------------------------
 #The root window
 root = Tkinter.Tk()
-root.title("Leon's New Fangled Interference & Diffraction Simulator")
+root.title("Interference Inference Interface")
 
 #The menubar and menus
 menubar = Tkinter.Menu(root)
