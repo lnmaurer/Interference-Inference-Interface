@@ -19,13 +19,15 @@ plotD = 100 #dimension of plot
 d  = 2.0/Nx #spatial grid element size
 dt = d/c/2**0.5 #time step -- this choice is good for a 2D simulation in vacuum
 
-nStable = int((barrierX + sqrt((Nx-barrierX)**2 + Ny**2))*d/c/dt) #time until stability is reached: to barrier then longest way across right domain
-
 #the wave:
 lamb  = 20*d		#wavelength -- 20 points per wavelength yeilds good results
 k     = 2*pi/lamb	#wavenumber
 omega = 2*pi*c/lamb	#angular frequency
 tau   = lamb/c		#time period
+
+#stability time step counts
+nStable = int((barrierX + sqrt((Nx-barrierX)**2 + Ny**2))*d/c/dt) #time steps until Ez beocmes stable: to barrier then longest way across right domain
+nAvgStable = int(10*tau/dt) #time steps of averaging to get the average stable (once Ez is already stable)
 
 #Yee algorithm update coefficients
 Db = dt/mu0/d
@@ -88,6 +90,7 @@ def exportData():
   
 def addOpening():
   global gaps
+  global nEnd
   
   bot = int(bottomEntry.get())
   top = int(topEntry.get())
@@ -99,6 +102,7 @@ def addOpening():
     if (newOrderFlat == sorted(newOrderFlat) #catches things like [50,100],[90,120] -- overlapping openings
       and len(list(set(newOrderFlat))) == len(newOrderFlat)): #catchs things like [50,100],[100,120] -- openings with no space between them
       gaps = newOrder
+      nEnd = n + nStable
       redrawBarrierFrame()
       conditionalRedraw()
   
@@ -146,20 +150,24 @@ def redrawBarrierFrame():
       
 def updateBarrierTop(barrierNumber, intVar):
   global gaps
+  global nEnd
   
   value = intVar.get()
   if ((barrierNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((barrierNumber < (len(gaps)-1)) and (value < gaps[barrierNumber+1][0]) and (value > gaps[barrierNumber][0])):
     gaps[barrierNumber][1] = value
+    nEnd = n + nStable
     conditionalRedraw()
   else:
     intVar.set(gaps[barrierNumber][1])
 
 def updateBarrierBottom(barrierNumber, intVar):
   global gaps
+  global nEnd
 
   value = intVar.get()
   if ((barrierNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((barrierNumber > 0) and (value > gaps[barrierNumber-1][1]) and (value < gaps[barrierNumber][1])):
     gaps[barrierNumber][0] = value
+    nEnd = n + nStable
     conditionalRedraw()
   else:
     intVar.set(gaps[barrierNumber][0])    
@@ -177,8 +185,10 @@ def invertedGaps():
   
 def removeBarrier(barrierNumber):
   global gaps
+  global nEnd
 
   del gaps[barrierNumber]
+  nEnd = n + nStable
   redrawBarrierFrame()
   conditionalRedraw()
     
@@ -331,8 +341,10 @@ def redrawCanvases():
  
   #if we haven't reached steady state yet, display a countdown with the number of steps until stability on EzRMScanvas
   #this is drawn last so that it's on top of everything
-  if n <= nStable and running:
-    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nStable-n), fill="Red", font=("system", "75"))
+  if n <= nEnd:
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75"))
+  elif nAveraging < nAvgStable:
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75"))
  
   #finially, show the current information about the slice intersection point
   tStringVar.set("t=" + str(n) + "dt")
@@ -388,15 +400,23 @@ def resetAveraging():
   conditionalRedraw()
       
 def reset():
+  global n
   global Ez
+  global Hx
+  global Hy
   global t
   global maxY
-    
+  global nEnd
+  global running
+  
+  running = False
+  Hx = zeros((NHXx, NHXy))
+  Hy = zeros((NHYx, NHYy))
   n = 0
-  resetAveraging()
+  nEnd = nStable
   Ez = zeros((NEZx, NEZy, 3))
   maxY = 1.0
-  conditionalRedraw()
+  resetAveraging() #contains a conditionalRedraw()
   
 def start():
   global running
@@ -413,26 +433,35 @@ def stop():
 def fastForward():
   global nEnd
   global fastForwarding
+  global fastForwardWithAvg
   
-  nEnd = n + nStable
   fastForwarding = True
+  if nEnd < n: #we've already reached stability, so now we're fast forwarding to get good averaging
+    fastForwardWithAvg = True
+  else:
+    fastForwardWithAvg = False
   root.after(1,fastForwardStep)
     
 def fastForwardStep():
   global ezPlot
   global fastForwarding
 
-  if n <= nEnd:
+  if (fastForwardWithAvg and nAveraging < nAvgStable) or n <= nEnd:
     #clear canvases and display countdown
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
-    Ezcanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
-    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
-    step(avg=False) #don't bother updating the averaging, since we're just ging to reset it after fast forwarding
+    if fastForwardWithAvg:
+      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75")) 
+      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75"))       
+    else:
+      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
+      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nEnd-n), fill="Red", font=("system", "75")) 
+    step(avg=fastForwardWithAvg) #only average if we're not going to reset right after we're done fast forwarding
     root.after(1,fastForwardStep)
   else: #stop fast forwarding
     fastForwarding = False
-    resetAveraging()
+    if not fastForwardWithAvg:
+      resetAveraging()
     if running:
       run()
     else:
@@ -441,7 +470,7 @@ def fastForwardStep():
 def run():
   if running:
     timer = time.clock()
-    if n == nStable:
+    if n == nEnd:
       resetAveraging()
     step()
     redrawCanvases()
@@ -489,7 +518,6 @@ def step(avg=True):
     
   #finially, update the time and the sources
   n += 1
-  nAveraging += 1
 
   #next, update Ez in the calculated area -- x=0[0,barrierX]
   #x and y for points on the barrier and to the left
@@ -509,9 +537,11 @@ def step(avg=True):
   for i in range(0,len(invGaps),2):
     Ez[barrierX, invGaps[i]:invGaps[i+1], 0] = 0     
     
-  #strictly speaking, the following will blow up to infinity if you integrate forever (since the FT of a sinusoid is a delta function)
-  #however, we're not that patient. plus, floating point limitations will prevent it (once the numbers are large enough, adding a small number to them won't change them)
-  if avg:
+  #first, only average if avg is true
+  #2nd, stop averaging once we've got enough points (i.e. after nAveraging == nAvgStable)
+  #however, if Ez still isn't stable (i.e. n < nEnd) then keep averaging anyway
+  if avg and (nAveraging < nAvgStable or n < nEnd):
+    nAveraging += 1
     EzSQ += square(Ez[:,:,0])
 
 #GLOBAL VARIABLES--------------------------------------------------------------
@@ -524,6 +554,7 @@ Hx = zeros((NHXx, NHXy))
 Hy = zeros((NHYx, NHYy))
 maxY = 1 #contains the largest Ez seen
 fastForwarding = False
+nEnd = nStable #number of steps stability will be reached at
 
 #THE GUI-----------------------------------------------------------------------
 #The root window
