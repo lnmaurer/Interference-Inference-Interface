@@ -58,7 +58,30 @@ HXy_range = slice(0, NHXy)
 NHYx = Nx - 1 #Hy not at x endpoints, so -1
 NHYy = Ny     #Hy goes all the way to y endpoints
 HYx_range = slice(0, NHYx) #all y positions updated using Yee
-HYy_range = slice(0, NHYy) 
+HYy_range = slice(0, NHYy)
+
+#NON-GUI GLOBAL VARIABLES------------------------------------------------------
+#time steps
+n          = 0 #the current time step
+nAveraging = 0 #number of time steps average has been running
+nCount     = nStable #nCount stores the time step we're counting to, when stability will be reached
+
+#booleans
+running        = False #stores whether or not the simulation is currently running
+fastForwarding = False #stores whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
+
+#numpy arrays
+Ez      = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
+EzSQsum = zeros((NEZx, NEZy)) #sum of 'Ez^2's at each timestep we've averaged over
+EzRMSSQ = zeros((NEZx, NEZy)) #Ez_RMS^2
+EzRMS   = zeros((NEZx, NEZy)) #Ez_RMS
+Hx      = zeros((NHXx, NHXy)) #Hx
+Hy      = zeros((NHYx, NHYy)) #Hy
+
+#largest array elements
+maxEz    = 1 #contains the largest Ez seen >=1
+maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one to avoid divide by zero problems on the first canvas refresh
+
 
 #THE METHODS-------------------------------------------------------------------
 def exportData():
@@ -99,6 +122,7 @@ def barrierChanged():
   
   maxEz = 1
   nCount = n + nStable
+  root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
   conditionalRedraw()
       
 def addOpening():
@@ -197,7 +221,7 @@ def removeBarrier(openingNumber):
   barrierChanged()
     
 def clearCanvasBindings(eventObj):
-  """Removes the command bound to dragging the mouse on the canvas (i.e. horizDragMethod or vertDragMethod)"""
+  """Removes the command bound to dragging the mouse on the canvas, used after the mouse button has been released when dragging is done"""
   Ezcanvas.bind("<B1-Motion>", lambda e: None)
   HorizPlotCanvas.bind("<B1-Motion>", lambda e: None)
   EzRMScanvas.bind("<B1-Motion>", lambda e: None)
@@ -368,15 +392,12 @@ def conditionalRedraw():
     redrawCanvases()  
   
 def horizClickMethod(eventObj):
-  """Binds the horizDragMethod to the appropriate canvases so that we can change sliceY with the mouse"""
-  Ezcanvas.bind('<B1-Motion>', horizDragMethod)
-  EzRMScanvas.bind('<B1-Motion>', horizDragMethod)
-  VertPlotCanvas1.bind('<B1-Motion>', horizDragMethod)
-  VertPlotCanvas2.bind('<B1-Motion>', horizDragMethod)
-    
-def horizDragMethod(eventObj):
-  setSliceY(eventObj.y)
-      
+  """Binds a method to the appropriate canvases so that we can change sliceY with the mouse"""
+  Ezcanvas.bind('<B1-Motion>', lambda eventObj: setSliceY(eventObj.y))
+  EzRMScanvas.bind('<B1-Motion>', lambda eventObj: setSliceY(eventObj.y))
+  VertPlotCanvas1.bind('<B1-Motion>', lambda eventObj: setSliceY(eventObj.y))
+  VertPlotCanvas2.bind('<B1-Motion>', lambda eventObj: setSliceY(eventObj.y))
+
 def setSliceY(y):
   """Sets sliceY to the new value if appropriate"""
   global sliceY
@@ -388,14 +409,11 @@ def setSliceY(y):
     conditionalRedraw()
     
 def vertClickMethod(eventObj):
-  """Binds the horizDragMethod to the appropriate canvases so that we can change sliceX with the mouse"""
-  Ezcanvas.bind('<B1-Motion>', vertDragMethod)
-  EzRMScanvas.bind('<B1-Motion>', vertDragMethod)
-  HorizPlotCanvas.bind('<B1-Motion>', vertDragMethod)
-    
-def vertDragMethod(eventObj):
-  setSliceX(eventObj.x)
-    
+  """Binds a method to the appropriate canvases so that we can change sliceX with the mouse"""
+  Ezcanvas.bind('<B1-Motion>', lambda eventObj: setSliceX(eventObj.x))
+  EzRMScanvas.bind('<B1-Motion>', lambda eventObj: setSliceX(eventObj.x))
+  HorizPlotCanvas.bind('<B1-Motion>', lambda eventObj: setSliceX(eventObj.x))
+
 def setSliceX(x):
   """Sets sliceX to the new value if appropriate"""
   global sliceX
@@ -555,7 +573,7 @@ def step(avg=True):
   n += 1
 
   #next, update Ez in the calculated area -- x=0[0,barrierX]
-  #x and y for points on the barrier and to the left
+  #x and y for points on and to the left of the barrier
   x, y = d * mgrid[EZx_ex_range, EZy_ex_range]
   
   #want wave to ramp up the wave's magnitude gradually and propigate at speed of light
@@ -584,35 +602,13 @@ def step(avg=True):
     
     maxEzRMS = numpy.max(EzRMS)
     if maxEzRMS == 0:
-      maxEzRMS = 1
+      maxEzRMS = 1 #avoid division by zero problems
 
   #because Ez oscillates, it's maximum will change a little in time, so we store it and update it if we find something larger
   tempMaxEz = numpy.max(abs(Ez))
   if tempMaxEz > maxEz:
     maxEz = tempMaxEz
       
-#GLOBAL VARIABLES--------------------------------------------------------------
-#time steps
-n          = 0 #the current time step
-nAveraging = 0 #number of time steps average has been running
-nCount     = nStable #nCount stores the time step we're counting to, when stability will be reached
-
-#booleans
-running        = False #stores whether or not the simulation is currently running
-fastForwarding = False #stores whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
-
-#numpy arrays
-Ez      = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
-EzSQsum = zeros((NEZx, NEZy)) #sum of 'Ez^2's at each timestep we've averaged over
-EzRMSSQ = zeros((NEZx, NEZy)) #Ez_RMS^2
-EzRMS   = zeros((NEZx, NEZy)) #Ez_RMS
-Hx      = zeros((NHXx, NHXy)) #Hx
-Hy      = zeros((NHYx, NHYy)) #Hy
-
-#largest array elements
-maxEz    = 1 #contains the largest Ez seen >=1
-maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one to avoid divide by zero problems on the first canvas refresh
-
 #THE GUI-----------------------------------------------------------------------
 #The root window
 root = Tkinter.Tk()
