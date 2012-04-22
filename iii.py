@@ -600,8 +600,7 @@ viewmenu.add_radiobutton(label="Ez_rms^2", variable=avgSetting, value="sq", comm
 
 viewmenu.add_separator()
 distLineSetting = Tkinter.StringVar(value="lines")
-viewmenu.add_checkbutton(label="Gap to slice lines", accelerator="Ctrl+D", variable=distLineSetting, onvalue="lines", offvalue="nolines", command=conditionalRedraw)
-root.bind_all('<Control-d>', lambda arg: conditionalRedraw())
+viewmenu.add_checkbutton(label="Gap to slice lines", variable=distLineSetting, onvalue="lines", offvalue="nolines", command=conditionalRedraw)
 menubar.add_cascade(label="View", menu=viewmenu)
 
 #the simulation menu
