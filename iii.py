@@ -62,6 +62,7 @@ HYy_range = slice(0, NHYy)
 
 #THE METHODS-------------------------------------------------------------------
 def exportData():
+  """Saves Ez, Ez_RMS, and other settings to a CSV file"""
   fileName = tkFileDialog.asksaveasfilename(filetypes=[('CSV','*.csv')], title="Export data as...")
   if fileName != '': #'' is returned if the user hits cancel
     writer = csv.writer(open(fileName, "w"))
@@ -69,6 +70,9 @@ def exportData():
     writer.writerow(('y_slice',sliceY))
     writer.writerow(('time steps',n))
     writer.writerow(('time steps averaged',nAveraging))
+    
+    for i, gap in enumerate(gaps):
+      writer.writerow(("Opening {}:".format(i),gap[0],gap[1]))      
     
     writer.writerow(('Ez','')) #need the '' or else it will split up 'Ez_RMS^2'???
     row = ['x\\y']
@@ -89,6 +93,7 @@ def exportData():
       writer.writerow(row)
 
 def barrierChanged():
+  """Any time a barrier gets changed, we need to wait for stability again, so maxEz and nCount are changed."""
   global nCount
   global maxEz
   
@@ -97,6 +102,7 @@ def barrierChanged():
   conditionalRedraw()
       
 def addOpening():
+  """Adds the opening described by bottomEntry and topEntry, if it's in range and doesn't overlap with exsisting gaps"""
   global gaps
   
   bot = int(bottomEntry.get())
@@ -113,6 +119,7 @@ def addOpening():
       barrierChanged()
   
 def redrawBarrierFrame():
+  """Each opening gets its own frame withing the barrier frame. This method redraws those."""
   global barrierFrames
   global strVars
   global distStrVars
@@ -154,50 +161,58 @@ def redrawBarrierFrame():
     r = r + 1
   updateDistStrVars()
       
-def updateBarrierTop(barrierNumber, intVar):
+def updateBarrierTop(openingNumber, intVar):
+  """Changes the top end of barrier number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
   
   value = intVar.get()
-  if ((barrierNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((barrierNumber < (len(gaps)-1)) and (value < gaps[barrierNumber+1][0]) and (value > gaps[barrierNumber][0])):
-    gaps[barrierNumber][1] = value
+  if ((openingNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((openingNumber < (len(gaps)-1)) and (value < gaps[openingNumber+1][0]) and (value > gaps[openingNumber][0])):
+    gaps[openingNumber][1] = value
     barrierChanged()
   else:
-    intVar.set(gaps[barrierNumber][1])
+    intVar.set(gaps[openingNumber][1])
 
-def updateBarrierBottom(barrierNumber, intVar):
+def updateBarrierBottom(openingNumber, intVar):
+  """Changes the bottom end of barrier number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
 
   value = intVar.get()
-  if ((barrierNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((barrierNumber > 0) and (value > gaps[barrierNumber-1][1]) and (value < gaps[barrierNumber][1])):
-    gaps[barrierNumber][0] = value
+  if ((openingNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((openingNumber > 0) and (value > gaps[openingNumber-1][1]) and (value < gaps[openingNumber][1])):
+    gaps[openingNumber][0] = value
     barrierChanged()
   else:
-    intVar.set(gaps[barrierNumber][0])    
+    intVar.set(gaps[openingNumber][0])    
   
 def updateDistStrVars():
+  """Updates all the StringVars in distStrVars to hold the correct distance from the gap to the slice intersection"""
   for gap, tv in zip(gaps, distStrVars):
     tv.set("dist=" + str(int(round(sqrt(((gap[0]+gap[1])/2.0-sliceY)**2+(barrierX-sliceX)**2)))) + "d")
+  
+def removeBarrier(openingNumber):
+  """Gets rid of the opening number openingNumber"""
+  global gaps
+
+  del gaps[openingNumber]
+  redrawBarrierFrame()
+  barrierChanged()
     
+def clearCanvasBindings(eventObj):
+  """Removes the command bound to dragging the mouse on the canvas (i.e. horizDragMethod or vertDragMethod)"""
+  Ezcanvas.bind("<B1-Motion>", lambda e: None)
+  HorizPlotCanvas.bind("<B1-Motion>", lambda e: None)
+  EzRMScanvas.bind("<B1-Motion>", lambda e: None)
+  VertPlotCanvas1.bind("<B1-Motion>", lambda e: None)
+  VertPlotCanvas2.bind("<B1-Motion>", lambda e: None)
+
 def invertedGaps():
   """Returns [0, start of first gap, end of first gap, start of second gap, end of second gap,...,Ny]"""
   invGaps = [ypos for pair in gaps for ypos in pair] #flatten gaps
   invGaps.insert(0,0) #insert zero at the 0th position
   invGaps.append(Ny) #put Ny for the last item
-  return invGaps
-  
-def removeBarrier(barrierNumber):
-  global gaps
-
-  del gaps[barrierNumber]
-  redrawBarrierFrame()
-  barrierChanged()
-    
-def clearCanvasBindings(eventObj):
-  Ezcanvas.bind("<B1-Motion>", lambda e: None)
-  HorizPlotCanvas.bind("<B1-Motion>", lambda e: None)
-  EzRMScanvas.bind("<B1-Motion>", lambda e: None)
+  return invGaps  
   
 def updateEzPlot():
+  """Makes a plot of Ez and stores it in ezPlot"""
   global ezPlot
   #notes:
   #1)Image.fromstring can only handle 32bit floats, so need to do that conversion
@@ -208,6 +223,7 @@ def updateEzPlot():
   ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
     
 def updateEzRMSPlot():
+  """Makes a plot of Ez_RMS or Ez_RMS^2 (whichever is selected by the user) and stores it in ezRMSPlot"""
   global ezRMSPlot
   
   if avgSetting.get() == 'sq': #want to display Ez_RMS^2
@@ -218,11 +234,16 @@ def updateEzRMSPlot():
   ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
 def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
+  """Stores the appropriate x or y values for the small canvas for the given x and y slices for the averaged traces (amplitude, Ez_RMS, or Ez_RMS^2).
+  Values are flipped across the long axis of the canvas if inverTrue.
+  If othercoord is an array (e.g. it's the x values we're finding the y values at),
+  then its reverse is appended to itself so that it's like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0],
+  and the y values are similiarly stored like [V0,...,Vn,-Vn,...,-V0], so that we plot +/- of the value"""
   if avgSetting.get() == 'amp': #want to display amplitude = EzRMS*sqrt(2) with zero in middle of plot
     v = int_(numpy.round((1+(EzRMS[xS,yS]*sqrt(2))/maxEz)*(plotD/2)))
     if othercoord != None: #in this case, let's plot +/-amplitude, not just amplitude
       othercoord.extend(othercoord[::-1]) #extend the coordinates so they're like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0]
-      v = concatenate((v,100-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
+      v = concatenate((v,plotD-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
   elif avgSetting.get() == 'rms': #want to display EzRMS with zero at bottom of plot
     v = int_(numpy.round((EzRMS[xS,yS]/maxEzRMS)*(plotD-1)))
   else: #want to display EzRMS^2 with zero at bottom of plot
@@ -233,13 +254,14 @@ def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
   return v
     
 def plot(draw, x, y, color):
-  """Plots the data on the drawing in the given color"""
+  """Plots the 1D data on the drawing in the given color"""
   if traceSetting.get() == 'line': #line plot
     draw.line(zip(x,y), fill=color)
   else: #dot plot
     draw.point(zip(x,y), fill=color)
       
 def updateHorizPlot():
+  """Updates the horizontal 1D plot"""
   global horizPlot
   
   im = Image.new('RGB', (Nx,plotD))
@@ -255,6 +277,7 @@ def updateHorizPlot():
   horizPlot = ImageTk.PhotoImage(image=im)
 
 def updateVertPlot():
+  """Updates the vertical 1D plot"""
   global vertPlot
   
   im = Image.new('RGB', (plotD, Ny))
@@ -269,7 +292,8 @@ def updateVertPlot():
   #turn plot in to a format the canvas can use  
   vertPlot = ImageTk.PhotoImage(image=im)  
     
-def redrawCanvases():  
+def redrawCanvases():
+  """Updates and redraws all the canvases as well as update the time step, Ez, and Ez_RMS labels"""
   #first, clear everything off the canvases (but don't delete the canvases themselves)
   Ezcanvas.delete('all')
   HorizPlotCanvas.delete('all')
@@ -300,8 +324,8 @@ def redrawCanvases():
     for gap, distStrVar in zip(gaps,distStrVars):
       #draw the lines
       yGap = (gap[0]+gap[1])/2
-      Ezcanvas.create_line([(barrierX,yGap),(sliceX,sliceY)], width=1, fill='orange', dash='.')
-      EzRMScanvas.create_line([(barrierX,yGap),(sliceX,sliceY)], width=1, fill='orange', dash='.')
+      Ezcanvas.create_line([(barrierX,yGap),(sliceX,sliceY)], width=1, fill='orange', dash=',')
+      EzRMScanvas.create_line([(barrierX,yGap),(sliceX,sliceY)], width=1, fill='orange', dash=',')
       #draw text showing the distances
       yText = (yGap + sliceY)/2
       xText = (barrierX+sliceX)/2
@@ -337,8 +361,14 @@ def redrawCanvases():
   tStringVar.set("t=" + str(n) + "dt")
   EzStringVar.set("Ez={:+.4f}".format(Ez[sliceX,sliceY,0]))
   EzRMSStringVar.set("EzRMS={:.4f}".format(EzRMS[sliceX,sliceY]))
-    
+
+def conditionalRedraw():
+  """In many cases, we want to redraw the canvas because something has changed. However, if it's running, the canvas will be redrawn soon anyway, so we don't need to do an extra redraw."""
+  if not running and not fastForwarding:
+    redrawCanvases()  
+  
 def horizClickMethod(eventObj):
+  """Binds the horizDragMethod to the appropriate canvases so that we can change sliceY with the mouse"""
   Ezcanvas.bind('<B1-Motion>', horizDragMethod)
   EzRMScanvas.bind('<B1-Motion>', horizDragMethod)
   VertPlotCanvas1.bind('<B1-Motion>', horizDragMethod)
@@ -346,13 +376,9 @@ def horizClickMethod(eventObj):
     
 def horizDragMethod(eventObj):
   setSliceY(eventObj.y)
-
-def conditionalRedraw():
-  """In many cases, we want to redraw the canvas because something has changed. However, if it's running, the canvas will be redrawn soon anyway, so we don't need to do an extra redraw."""
-  if not running and not fastForwarding:
-    redrawCanvases()
       
 def setSliceY(y):
+  """Sets sliceY to the new value if appropriate"""
   global sliceY
   
   if (y >= 0) and (y < Ny):
@@ -362,6 +388,7 @@ def setSliceY(y):
     conditionalRedraw()
     
 def vertClickMethod(eventObj):
+  """Binds the horizDragMethod to the appropriate canvases so that we can change sliceX with the mouse"""
   Ezcanvas.bind('<B1-Motion>', vertDragMethod)
   EzRMScanvas.bind('<B1-Motion>', vertDragMethod)
   HorizPlotCanvas.bind('<B1-Motion>', vertDragMethod)
@@ -370,6 +397,7 @@ def vertDragMethod(eventObj):
   setSliceX(eventObj.x)
     
 def setSliceX(x):
+  """Sets sliceX to the new value if appropriate"""
   global sliceX
   
   if (x >= 0) and (x < Nx):
@@ -379,14 +407,20 @@ def setSliceX(x):
     conditionalRedraw()  
     
 def resetAveraging():
+  """Reset averaged quantities and timers"""
   global nAveraging
   global EzSQsum
+  global EzRMSSQ
+  global EzRMS
   
   nAveraging = 0
   EzSQsum = zeros((NEZx, NEZy))
+  EzRMSSQ = zeros((NEZx, NEZy))
+  EzRMS = zeros((NEZx, NEZy))
   conditionalRedraw()
       
 def reset():
+  """Reset all field quantities and times"""
   global n
   global Ez
   global Hx
@@ -406,6 +440,7 @@ def reset():
   resetAveraging() #contains a conditionalRedraw()
   
 def start():
+  """Starts the simulation if it's stopped"""
   global running
   
   if not running:
@@ -413,11 +448,13 @@ def start():
     run()
     
 def stop():
+  """Stops the simulation"""
   global running
 
   running = False
   
 def fastForward():
+  """Starts fast forwarding the simulation"""
   global nCount
   global fastForwarding
   
@@ -429,6 +466,9 @@ def fastForward():
 
     
 def fastForwardStep(fastForwardWithAvg):
+  """Runs the simulation for the appropriate time without displaying the results.
+  If n<=nCount, then we're running until Ez is stable.
+  If fastForwardWithAvg==True and nAveraging<nAvgStable, then we're running to get good averaging"""
   global ezPlot
   global fastForwarding
 
@@ -457,9 +497,10 @@ def fastForwardStep(fastForwardWithAvg):
       start()
   
 def run():
+  """Runs the simulation while displaying the results at every step"""
   if running:
     timer = time.clock()
-    if n == nCount:
+    if n == nCount: #now that Ez is stable, reset the averaging so that it can reach stability
       resetAveraging()
     step()
     redrawCanvases()
@@ -468,6 +509,7 @@ def run():
       root.after(1,run)
   
 def step(avg=True):
+  """Advances the file quantities by one timestep"""
   global Ez
   global Hz
   global Hy
@@ -550,13 +592,16 @@ def step(avg=True):
     maxEz = tempMaxEz
       
 #GLOBAL VARIABLES--------------------------------------------------------------
-n = 0 #the current time step
+#time steps
+n          = 0 #the current time step
 nAveraging = 0 #number of time steps average has been running
-nCount = nStable #nCount stores whatever time step we're counting to. Here, its when stability will be reached
+nCount     = nStable #nCount stores the time step we're counting to, when stability will be reached
 
+#booleans
 running        = False #stores whether or not the simulation is currently running
 fastForwarding = False #stores whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
 
+#numpy arrays
 Ez      = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
 EzSQsum = zeros((NEZx, NEZy)) #sum of 'Ez^2's at each timestep we've averaged over
 EzRMSSQ = zeros((NEZx, NEZy)) #Ez_RMS^2
@@ -564,6 +609,7 @@ EzRMS   = zeros((NEZx, NEZy)) #Ez_RMS
 Hx      = zeros((NHXx, NHXy)) #Hx
 Hy      = zeros((NHYx, NHYy)) #Hy
 
+#largest array elements
 maxEz    = 1 #contains the largest Ez seen >=1
 maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one to avoid divide by zero problems on the first canvas refresh
 
@@ -673,6 +719,8 @@ EzRMScanvas.grid(column=0, row=8, columnspan=3, rowspan=3, sticky='nsew', padx=5
 Ezcanvas.bind("<Motion>", clearCanvasBindings)
 HorizPlotCanvas.bind("<Motion>", clearCanvasBindings)
 EzRMScanvas.bind("<Motion>", clearCanvasBindings)
+VertPlotCanvas1.bind("<Motion>", clearCanvasBindings)
+VertPlotCanvas2.bind("<Motion>", clearCanvasBindings)
 
 #make the arrow keys control the slice positions
 root.bind("<Up>", lambda arg: setSliceY(sliceY-1))
@@ -692,8 +740,8 @@ ttk.Label(barrierFrame, text="Top:").grid(column=0, row=2, sticky='nes', padx=5,
 topEntry = Tkinter.Spinbox(barrierFrame, width=4, from_=0, to=Nx)
 topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
 
-gaps = [[50,70],[230,250]]
-barrierFrames = []
+gaps = [[50,70],[230,250]] #good for standard double slit experiment
+barrierFrames = [] #stores the frames for each opening in the barrier; need to initialize it as an empty array
 
 #draw on the canvases and set up the barrier frame
 redrawBarrierFrame()
