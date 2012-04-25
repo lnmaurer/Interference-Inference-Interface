@@ -2,7 +2,7 @@ import Tkinter, tkFileDialog, ttk, tkMessageBox
 import csv #for exporting in CSV
 import time #for testing how long steps take
 from numpy import * #so that we don't have to have 'numpy.'s everywhere
-import numpy #so that we can use numpy.round, which otherwise conflicts with python's built in rounding function
+from numpy import round, max #so that we can use numpy.round and numpy.max, which otherwise conflicts with python's built functions
 from PIL import Image, ImageTk, ImageDraw
 
 #CONSTANTS---------------------------------------------------------------------
@@ -270,14 +270,14 @@ def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
   then its reverse is appended to itself so that it's like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0],
   and the y values are similiarly stored like [V0,...,Vn,-Vn,...,-V0], so that we plot +/- of the value"""
   if avgSetting.get() == 'amp': #want to display amplitude = EzRMS*sqrt(2) with zero in middle of plot
-    v = int_(numpy.round((1+(EzRMS[xS,yS]*sqrt(2))/maxEz)*(plotD/2)))
+    v = int_(round((1+(EzRMS[xS,yS]*sqrt(2))/maxEz)*(plotD/2)))
     if othercoord != None: #in this case, let's plot +/-amplitude, not just amplitude
       othercoord.extend(othercoord[::-1]) #extend the coordinates so they're like [0,1...,Nx-1,Nx,Nx,Nx-1,...,1,0]
       v = concatenate((v,plotD-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
   elif avgSetting.get() == 'rms': #want to display EzRMS with zero at bottom of plot
-    v = int_(numpy.round((EzRMS[xS,yS]/maxEzRMS)*(plotD-1)))
+    v = int_(round((EzRMS[xS,yS]/maxEzRMS)*(plotD-1)))
   else: #want to display EzRMS^2 with zero at bottom of plot
-    v = int_(numpy.round((EzRMSSQ[xS,yS]/maxEzRMS**2)*(plotD-1)))
+    v = int_(round((EzRMSSQ[xS,yS]/maxEzRMS**2)*(plotD-1)))
     
   if invert: #mirror results across axis
     v = plotD - v
@@ -301,7 +301,7 @@ def updateHorizPlot():
   y = makeAvgedTrace(EZx_all, sliceY, invert=True, othercoord=x)
   plot(draw, x, y, 'green')
   #plot Ez
-  y = int_(numpy.round((-Ez[:,sliceY,0]/maxEz+1)*(plotD/2)))
+  y = int_(round((-Ez[:,sliceY,0]/maxEz+1)*(plotD/2)))
   plot(draw, x, y, 'yellow')
   #turn plot in to a format the canvas can use
   horizPlot = ImageTk.PhotoImage(image=im)
@@ -317,7 +317,7 @@ def updateVertPlot():
   x = makeAvgedTrace(sliceX, EZy_all, othercoord=y)
   plot(draw, x, y, 'green')
   #plot Ez
-  x = int_(numpy.round((Ez[sliceX,:,0]/maxEz+1)*(plotD/2)))
+  x = int_(round((Ez[sliceX,:,0]/maxEz+1)*(plotD/2)))
   plot(draw, x, y, 'yellow')
   #turn plot in to a format the canvas can use  
   vertPlot = ImageTk.PhotoImage(image=im)  
@@ -606,12 +606,12 @@ def step(avg=True):
     EzRMSSQ = EzSQsum/nAveraging
     EzRMS   = sqrt(EzRMSSQ)
     
-    maxEzRMS = numpy.max(EzRMS)
+    maxEzRMS = max(EzRMS)
     if maxEzRMS == 0:
       maxEzRMS = 1 #avoid division by zero problems
 
   #because Ez oscillates, it's maximum will change a little in time, so we store it and update it if we find something larger
-  tempMaxEz = numpy.max(abs(Ez))
+  tempMaxEz = max(abs(Ez))
   if tempMaxEz > maxEz:
     maxEz = tempMaxEz
       
