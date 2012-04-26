@@ -116,7 +116,7 @@ def exportData():
       writer.writerow(row)
 
 def barrierChanged():
-  """Any time a barrier gets changed, we need to wait for stability again, so maxEz and nCount are changed."""
+  """Any time the barrier gets changed, we need to wait for stability again, so maxEz and nCount are changed."""
   global nCount
   global maxEz
   
@@ -157,8 +157,8 @@ def redrawBarrierFrame():
   r = 3 #rows 0,1,2 already taken by widgets for adding an opeing
     
   for gap in gaps:
-    bn = r-3 #barrier number
-    frame = ttk.Labelframe(barrierFrame, text="Opening {}".format(bn))
+    oNum = r-3 #opening number
+    frame = ttk.Labelframe(barrierFrame, text="Opening {}".format(oNum))
     frame.grid(column=0, row=r, columnspan=2, sticky='nesw', padx=5, pady=5)
       
     top = Tkinter.IntVar()
@@ -166,15 +166,15 @@ def redrawBarrierFrame():
     distStrVar = Tkinter.StringVar()
     ttk.Label(frame, text="Bottom:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
     #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=bn, tv=bottom: updateBarrierBottom(n,tv))
-    entry.bind("<Return>",lambda arg, n=bn, tv=bottom: updateBarrierBottom(n,tv))
+    entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=oNum, tv=bottom: updateBarrierBottom(n,tv))
+    entry.bind("<Return>",lambda arg, n=oNum, tv=bottom: updateBarrierBottom(n,tv))
     entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, text="Top:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=bn, tv=top: updateBarrierTop(n,tv))
-    entry.bind("<Return>",lambda arg, n=bn, tv=top: updateBarrierTop(n,tv))
+    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=oNum, tv=top: updateBarrierTop(n,tv))
+    entry.bind("<Return>",lambda arg, n=oNum, tv=top: updateBarrierTop(n,tv))
     entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, textvariable=distStrVar).grid(column=0, row=2, sticky='nes', padx=5, pady=5)
-    ttk.Button(frame, text='Remove', command=lambda n=bn: removeBarrier(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
+    ttk.Button(frame, text='Remove', command=lambda n=oNum: removeBarrier(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
     top.set(gap[1])
     bottom.set(gap[0])
     strVars.append(top)
@@ -186,7 +186,7 @@ def redrawBarrierFrame():
   updateDistStrVars()
       
 def updateBarrierTop(openingNumber, intVar):
-  """Changes the top end of barrier number openingNumber to the value stored in intVar, if the change is valid"""
+  """Changes the top end of opening number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
   
   value = intVar.get()
@@ -200,7 +200,7 @@ def updateBarrierTop(openingNumber, intVar):
     root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
 
 def updateBarrierBottom(openingNumber, intVar):
-  """Changes the bottom end of barrier number openingNumber to the value stored in intVar, if the change is valid"""
+  """Changes the bottom end of opening number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
 
   value = intVar.get()
@@ -359,8 +359,8 @@ def redrawCanvases():
       #draw text showing the distances
       yText = (yGap + sliceY)/2
       xText = (barrierX+sliceX)/2
-      Ezcanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("system", "12"))
-      EzRMScanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("system", "12"))
+      Ezcanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("Helvetica", "12"))
+      EzRMScanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("Helvetica", "12"))
   
   #now, draw the horizontal slice
   lineID = Ezcanvas.create_line([(0,sliceY),(Nx,sliceY)], width=1, fill='yellow', dash='-') 
@@ -383,9 +383,9 @@ def redrawCanvases():
   #if we haven't reached steady state yet, display a countdown with the number of steps until stability on EzRMScanvas
   #this is drawn last so that it's on top of everything
   if n <= nCount:
-    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75"))
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("Helvetica", "75"))
   elif nAveraging < nAvgStable:
-    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75"))
+    EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("Helvetica", "75"))
  
   #finially, show the current information about the slice intersection point
   tStringVar.set("t=" + str(n) + "dt")
@@ -504,11 +504,11 @@ def fastForwardStep(fastForwardWithAvg):
     Ezcanvas.delete('all')
     EzRMScanvas.delete('all')
     if fastForwardWithAvg:
-      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75")) 
-      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("system", "75"))       
+      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("Helvetica", "75")) 
+      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nAvgStable-nAveraging), fill="Magenta", font=("Helvetica", "75"))       
     else:
-      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75")) 
-      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("system", "75")) 
+      Ezcanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("Helvetica", "75")) 
+      EzRMScanvas.create_text(Nx/2,Ny/2, text=str(nCount-n), fill="Red", font=("Helvetica", "75")) 
     step(avg=fastForwardWithAvg) #only average if we're not going to reset right after we're done fast forwarding
     root.after(1,lambda: fastForwardStep(fastForwardWithAvg))
   else: #stop fast forwarding
