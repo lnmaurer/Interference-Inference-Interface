@@ -756,10 +756,10 @@ VertPlotCanvas1.bind("<Motion>", clearCanvasBindings)
 VertPlotCanvas2.bind("<Motion>", clearCanvasBindings)
 
 #make the arrow keys control the slice positions
-root.bind("<Up>", lambda arg: setSliceY(sliceY-1))
-root.bind("<Down>", lambda arg: setSliceY(sliceY+1))
-root.bind("<Right>", lambda arg: setSliceX(sliceX+1))
-root.bind("<Left>", lambda arg: setSliceX(sliceX-1))
+root.bind_all("<Up>", lambda arg: setSliceY(sliceY-1))
+root.bind_all("<Down>", lambda arg: setSliceY(sliceY+1))
+root.bind_all("<Right>", lambda arg: setSliceX(sliceX+1))
+root.bind_all("<Left>", lambda arg: setSliceX(sliceX-1))
 
 #The barrier frame and intial barrier setup
 barrierFrame = ttk.Labelframe(root, text='Barrier')
