@@ -145,14 +145,16 @@ def addOpening():
 def redrawBarrierFrame():
   """Each opening gets its own frame withing the barrier frame. This method redraws those."""
   global barrierFrames
-  global strVars
+  global intVars
   global distStrVars
+  global updateButtons
   
   gaps.sort()
   for f in barrierFrames:
     f.destroy() #get rid of old frames
   barrierFrames = []
-  strVars       = [] #need to save StringVars or else they get garbage collected
+  updateButtons = [] #holds the buttons for updating the openings
+  intVars       = [] #need to save StringVars or else they get garbage collected
   distStrVars   = [] #holds stringVars that report the distance from the center of the gaps to the slice intersection
   r = 3 #rows 0,1,2 already taken by widgets for adding an opeing
     
@@ -164,54 +166,83 @@ def redrawBarrierFrame():
     top = Tkinter.IntVar()
     bottom = Tkinter.IntVar()
     distStrVar = Tkinter.StringVar()
+    
+    #the spinbox for the bottom of the opening
     ttk.Label(frame, text="Bottom:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
     #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=oNum, tv=bottom: updateOpeningBottom(n,tv))
-    entry.bind("<Return>",lambda arg, n=oNum, tv=bottom: updateOpeningBottom(n,tv))
-    entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
+    spinbox = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=oNum: spinboxChanged(n))
+    spinbox.bind("<Enter>",lambda arg, n=oNum: updateOpening(n)) #hitting enter will change the opening todo:not working
+    spinbox.bind("<Key>",lambda arg, n=oNum: spinboxChanged(n)) #any key runs the spinboxChanged method, which will enable or disable the 'update' button
+    spinbox.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, text="Top:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=oNum, tv=top: updateOpeningTop(n,tv))
-    entry.bind("<Return>",lambda arg, n=oNum, tv=top: updateOpeningTop(n,tv))
-    entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
+    
+    #the spinbox for the top of the opening
+    spinbox = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=oNum: spinboxChanged(n))
+    spinbox.bind("<Enter>",lambda arg, n=oNum: updateOpening(n)) #todo:not working
+    spinbox.bind("<Key>",lambda arg, n=oNum: spinboxChanged(n))
+    spinbox.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, textvariable=distStrVar).grid(column=0, row=2, sticky='nes', padx=5, pady=5)
-    ttk.Button(frame, text='Remove', command=lambda n=oNum: removeOpening(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
+    ub = ttk.Button(frame, text='Update Opening', state="disabled", command=lambda n=oNum: updateOpening(n))
+    ub.grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
+    updateButtons.append(ub)
+    ttk.Button(frame, text='Remove', command=lambda n=oNum: removeOpening(n)).grid(column=0, row=4, sticky='nsew', columnspan=2, padx=5, pady=5)
     top.set(gap[1])
     bottom.set(gap[0])
-    strVars.append(top)
-    strVars.append(bottom) 
+    intVars.append(top)
+    intVars.append(bottom) 
     distStrVars.append(distStrVar)
       
     barrierFrames.append(frame)
     r = r + 1
   updateDistStrVars()
-      
-def updateOpeningTop(openingNumber, intVar):
-  """Changes the top end of opening number openingNumber to the value stored in intVar, if the change is valid"""
+
+def spinboxChanged(openingNumber):
+  """Called any time a spinbox for an opening top or bottom is changed. This enables or disables the 'update' button."""
+  try:
+    currentTop = intVars[openingNumber/2].get()
+    currentBot = intVars[openingNumber/2+1].get()
+    if (gaps[openingNumber][1] != currentTop) or (gaps[openingNumber][0] != currentBot): #if either the top or bottom spibox value is different from the stored values, enable the update button
+      updateButtons[openingNumber].config(state="normal")
+    else: #if neither are different, then disable the button
+      updateButtons[openingNumber].config(state="disabled")
+  except ValueError: #one of the entered strings isn't a valid number
+    updateButtons[openingNumber].config(state="disabled")
+  
+def updateOpening(openingNumber):
   global gaps
   
-  value = intVar.get()
-  if not gaps[openingNumber][1] == value: #don't do anything if nothing has changed
-    if ((openingNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((openingNumber < (len(gaps)-1)) and (value < gaps[openingNumber+1][0]) and (value > gaps[openingNumber][0])):
-      gaps[openingNumber][1] = value
-      barrierChanged()
-    else:
-      intVar.set(gaps[openingNumber][1])
-  else:
-    root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
+  updateBarrier = False
+  
+  #take care of the top opening
+  intVar = intVars[openingNumber/2]
+  try:
+    value  = intVar.get()
+    if not gaps[openingNumber][1] == value: #don't do anything if nothing has changed
+      if ((openingNumber == (len(gaps)-1)) and (value < Ny) and (value > gaps[-1][0])) or ((openingNumber < (len(gaps)-1)) and (value < gaps[openingNumber+1][0]) and (value > gaps[openingNumber][0])):
+	gaps[openingNumber][1] = value
+	updateBarrier = True
+      else: #if the value was invalid, reset it to a valid value
+	intVar.set(gaps[openingNumber][1])
+  except ValueError:
+    intVar.set(gaps[openingNumber][1])
 
-def updateOpeningBottom(openingNumber, intVar):
-  """Changes the bottom end of opening number openingNumber to the value stored in intVar, if the change is valid"""
-  global gaps
+  #take care of the bottom opening
+  intVar = intVars[openingNumber/2+1]
+  try:
+    value  = intVar.get()
+    if not gaps[openingNumber][0] == value: #don't do anything if nothing has changed
+      if ((openingNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((openingNumber > 0) and (value > gaps[openingNumber-1][1]) and (value < gaps[openingNumber][1])):
+	gaps[openingNumber][0] = value
+	updateBarrier = True
+      else: #if the value was invalid, reset it to a valid value
+	intVar.set(gaps[openingNumber][0])
+  except ValueError:
+    intVar.set(gaps[openingNumber][0])
+  
+  if updateBarrier == True: #update the barrier if needed
+    barrierChanged()
 
-  value = intVar.get()
-  if not gaps[openingNumber][0] == value: #don't do anything if nothing has changed
-    if ((openingNumber == 0) and (value > 0) and (value < gaps[0][1])) or ((openingNumber > 0) and (value > gaps[openingNumber-1][1]) and (value < gaps[openingNumber][1])):
-      gaps[openingNumber][0] = value
-      barrierChanged()
-    else:
-      intVar.set(gaps[openingNumber][0])   
-  else:
-    root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
+  spinboxChanged(openingNumber) #regaurdless of what happened, the update box should be disabled
   
 def updateDistStrVars():
   """Updates all the StringVars in distStrVars to hold the correct distance from the gap to the slice intersection"""
