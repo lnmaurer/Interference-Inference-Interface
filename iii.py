@@ -6,18 +6,18 @@ from numpy import round, max #so that we can use numpy.round and numpy.max, whic
 from PIL import Image, ImageTk, ImageDraw
 
 #CONSTANTS---------------------------------------------------------------------
-mu0      = 1.2566370614e-6    #Vacuum permeability
-epsilon0 = 8.854187817620e-12 # Vacuum permittivity
+mu0      = 1.2566370614e-6	#Vacuum permeability
+epsilon0 = 8.854187817620e-12	# Vacuum permittivity
 c        = 1/(mu0*epsilon0)**0.5
   
-Nx = 600 #width of simulation and view canvas
-Ny = 300 #height of simulation and view canvas
-barrierX = 100 #x position of the barrier
+Nx = 600	#width of simulation and view canvas
+Ny = 300	#height of simulation and view canvas
+barrierX = 100	#x position of the barrier
   
-plotD = 100 #dimension of plot
+plotD = 100	#dimension of plot
   
-d  = 2.0/(Nx-1) #spatial grid element size
-dt = d/c/2**0.5 #time step -- this choice is good for a 2D simulation in vacuum
+d  = 2.0/(Nx-1)	#spatial grid element size
+dt = d/c/2**0.5	#time step -- this choice is good for a 2D simulation in vacuum
 
 #the wave:
 lamb  = 20*d		#wavelength -- 20 points per wavelength yeilds good results
@@ -71,7 +71,7 @@ running        = False #stores whether or not the simulation is currently runnin
 fastForwarding = False #stores whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
 
 #numpy arrays
-Ez      = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of two past values of Ez
+Ez      = zeros((NEZx, NEZy,3)) #3rd dimension to keep track of Ez at last two timesteps
 EzSQsum = zeros((NEZx, NEZy)) #sum of 'Ez^2's at each timestep we've averaged over
 EzRMSSQ = zeros((NEZx, NEZy)) #Ez_RMS^2
 EzRMS   = zeros((NEZx, NEZy)) #Ez_RMS
@@ -129,12 +129,12 @@ def addOpening():
   """Adds the opening described by bottomEntry and topEntry, if it's in range and doesn't overlap with exsisting gaps"""
   global gaps
   
-  bot = int(bottomEntry.get())
-  top = int(topEntry.get())
+  bot = int(bottomEntry.get())	#top of proposed opening
+  top = int(topEntry.get())	#bottom of proposed opening
   if bot > 0 and top < Ny and bot < top: #some initial checks that top and bot better pass
     newOrder = gaps[:] #copy gaps, don't just point to it
     newOrder.append([bot,top])
-    newOrder.sort()
+    newOrder.sort() #sorts by first entry of each pair (the bottom)
     newOrderFlat = [ypos for pair in newOrder for ypos in pair] #flatten
     if (newOrderFlat == sorted(newOrderFlat) #catches things like [50,100],[90,120] -- overlapping openings
       and len(list(set(newOrderFlat))) == len(newOrderFlat)): #catchs things like [50,100],[100,120] -- openings with no space between them
@@ -166,15 +166,15 @@ def redrawBarrierFrame():
     distStrVar = Tkinter.StringVar()
     ttk.Label(frame, text="Bottom:").grid(column=0, row=0, sticky='nes', padx=5, pady=5)
     #having the following work is kind of tricky; the default parameter in the lambda is critical. See <http://mail.python.org/pipermail/tutor/2005-November/043360.html>
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=oNum, tv=bottom: updateBarrierBottom(n,tv))
-    entry.bind("<Return>",lambda arg, n=oNum, tv=bottom: updateBarrierBottom(n,tv))
+    entry = Tkinter.Spinbox(frame, width=4, textvariable=bottom, from_=0, to=Nx, command=lambda n=oNum, tv=bottom: updateOpeningBottom(n,tv))
+    entry.bind("<Return>",lambda arg, n=oNum, tv=bottom: updateOpeningBottom(n,tv))
     entry.grid(column=1, row=0, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, text="Top:").grid(column=0, row=1, sticky='nes', padx=5, pady=5)
-    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=oNum, tv=top: updateBarrierTop(n,tv))
-    entry.bind("<Return>",lambda arg, n=oNum, tv=top: updateBarrierTop(n,tv))
+    entry = Tkinter.Spinbox(frame, width=4, textvariable=top, from_=0, to=Nx, command=lambda n=oNum, tv=top: updateOpeningTop(n,tv))
+    entry.bind("<Return>",lambda arg, n=oNum, tv=top: updateOpeningTop(n,tv))
     entry.grid(column=1, row=1, sticky='nsw', padx=5, pady=5)
     ttk.Label(frame, textvariable=distStrVar).grid(column=0, row=2, sticky='nes', padx=5, pady=5)
-    ttk.Button(frame, text='Remove', command=lambda n=oNum: removeBarrier(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
+    ttk.Button(frame, text='Remove', command=lambda n=oNum: removeOpening(n)).grid(column=0, row=3, sticky='nsew', columnspan=2, padx=5, pady=5)
     top.set(gap[1])
     bottom.set(gap[0])
     strVars.append(top)
@@ -185,7 +185,7 @@ def redrawBarrierFrame():
     r = r + 1
   updateDistStrVars()
       
-def updateBarrierTop(openingNumber, intVar):
+def updateOpeningTop(openingNumber, intVar):
   """Changes the top end of opening number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
   
@@ -199,7 +199,7 @@ def updateBarrierTop(openingNumber, intVar):
   else:
     root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
 
-def updateBarrierBottom(openingNumber, intVar):
+def updateOpeningBottom(openingNumber, intVar):
   """Changes the bottom end of opening number openingNumber to the value stored in intVar, if the change is valid"""
   global gaps
 
@@ -218,7 +218,7 @@ def updateDistStrVars():
   for gap, tv in zip(gaps, distStrVars):
     tv.set("dist=" + str(int(round(sqrt(((gap[0]+gap[1])/2.0-sliceY)**2+(barrierX-sliceX)**2)))) + "d")
   
-def removeBarrier(openingNumber):
+def removeOpening(openingNumber):
   """Gets rid of the opening number openingNumber"""
   global gaps
 
