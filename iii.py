@@ -5,6 +5,17 @@ from numpy import * #so that we don't have to have 'numpy.'s everywhere
 from numpy import round, max #so that we can use numpy.round and numpy.max, which otherwise conflicts with python's built functions
 from PIL import Image, ImageTk, ImageDraw
 
+#NOTES
+"""
+This code is mostly for the interface; almost all the numerics is done in step().
+The numerics impliments the Yee algorithm for a 2D TMZ wave and 2nd order Mur RBCs
+on the top, bottom, and right edges of the simulation domain.
+
+Speaking of which, the simulation domain is to the right of the barrier. To the
+left of the barrier, the values of the incoming plane wave are calculated
+explicitly.
+"""
+
 #CONSTANTS---------------------------------------------------------------------
 mu0      = 1.2566370614e-6	#Vacuum permeability
 epsilon0 = 8.854187817620e-12	# Vacuum permittivity
@@ -564,7 +575,7 @@ def run():
       root.after(1,run)
   
 def step(avg=True):
-  """Advances the file quantities by one timestep"""
+  """Advances the field quantities by one timestep"""
   global Ez
   global Hz
   global Hy
@@ -656,9 +667,6 @@ menubar = Tkinter.Menu(root)
 
 #the file menu
 filemenu = Tkinter.Menu(menubar, tearoff=0)
-#filemenu.add_command(label="Save Experiment As", accelerator="Ctrl+S")
-#filemenu.add_command(label="Load Experiment", accelerator="Ctrl+O")
-#filemenu.add_separator()
 filemenu.add_command(label="Export Data", accelerator="Ctrl+E", command=exportData)
 filemenu.add_separator()
 filemenu.add_command(label="Exit", accelerator="Ctrl+Q", command=root.quit)
