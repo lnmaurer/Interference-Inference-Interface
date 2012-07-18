@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import Tkinter, tkFileDialog, ttk, tkMessageBox
 import csv #for exporting in CSV
 import time #for testing how long steps take
@@ -8,7 +10,7 @@ from PIL import Image, ImageTk, ImageDraw
 #NOTES
 """
 This code is mostly for the interface; almost all the numerics is done in step().
-The numerics impliments the Yee algorithm for a 2D TMZ wave and 2nd order Mur RBCs
+The numerics impliments the Yee algorithm for a 2D TMz wave and 2nd order Mur RBCs
 on the top, bottom, and right edges of the simulation domain.
 
 Speaking of which, the simulation domain is to the right of the barrier. To the
@@ -639,7 +641,7 @@ def step(avg=True):
   #finially, update the time and the sources
   n += 1
 
-  #next, update Ez in the calculated area -- x=0[0,barrierX]
+  #next, update Ez in the calculated area -- x=[0,barrierX]
   #x and y for points on and to the left of the barrier
   x, y = d * mgrid[EZx_ex_range, EZy_ex_range]
   
