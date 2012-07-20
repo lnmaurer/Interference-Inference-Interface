@@ -27,7 +27,7 @@ c        = 1/(mu0*epsilon0)**0.5
 canvasX = 600 #width of view canvas
 canvasY = 300 #height of view canvas
 barrierX = 100	#x position of the barrier
-pmlWidth = 8
+pmlWidth = 9 #also includes 1 for the PEC
 
 Nx = canvasX - barrierX + pmlWidth	#width of the FDTD domain; overlaps anayltic domain by one and has pml on right side
 Ny = canvasY + 2*pmlWidth		#height of the FDTD domain; has pml on top and bottom
@@ -47,9 +47,7 @@ tau   = lamb/c		#time period
 nStable = int((barrierX + sqrt((canvasX-barrierX)**2 + canvasY**2))*d/c/dt) #time steps until Ez beocmes stable: to barrier then longest way across right domain
 nAvgStable = int(10*tau/dt) #time steps of averaging to get the average stable (once Ez is already stable)
 
-#Yee algorithm update coefficients
-Db = dt/mu0/d
-Cb = dt/epsilon0/d
+
   
 NEZx = Nx #number of Ez grid points in x direction -- goes all the way to the edge
 NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the edge
@@ -76,6 +74,24 @@ NHYy = Ny     #Hy goes all the way to y endpoints
 HYx_range = slice(0, NHYx) #all y positions updated using Yee
 HYy_range = slice(0, NHYy)
 
+#conductivities
+sigmaStX = zeros((NHYx,NHYy)) #used to update Hy
+sigmaStY = zeros((NHXx,NHXy)) #used to update Hx
+
+sigmaX = zeros((NEZx-2,NEZy-2)) #used to update Ezx in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+sigmaY = zeros((NEZx-2,NEZy-2)) #used to update Ezy in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+
+#Yee algorithm update coefficients
+CaX = (1-sigmaX*dt/2/epsilon0)/(1+sigmaX*dt/2/epsilon0)
+CaY = (1-sigmaY*dt/2/epsilon0)/(1+sigmaY*dt/2/epsilon0)
+CbX = dt/epsilon0/d/(1+sigmaX*dt/2/epsilon0)
+CbY = dt/epsilon0/d/(1+sigmaY*dt/2/epsilon0)
+
+DaX = (1-sigmaStX*dt/2/epsilon0)/(1+sigmaStX*dt/2/epsilon0)
+DaY = (1-sigmaStY*dt/2/epsilon0)/(1+sigmaStY*dt/2/epsilon0)
+DbX = dt/mu0/d/(1+sigmaStX*dt/2/epsilon0)
+DbY = dt/mu0/d/(1+sigmaStY*dt/2/epsilon0)
+
 #NON-GUI GLOBAL VARIABLES------------------------------------------------------
 #time steps
 n          = 0 #the current time step
@@ -88,9 +104,11 @@ fastForwarding = False #stores whether or not the simulation is in fast forward 
 
 #numpy arrays
 #for FDTD domain
-Ez      = zeros((NEZx, NEZy))
-Hx      = zeros((NHXx, NHXy))
-Hy      = zeros((NHYx, NHYy))
+Ez       = zeros((NEZx, NEZy))
+Ezx      = zeros((NEZx, NEZy))
+Ezy      = zeros((NEZx, NEZy))
+Hx       = zeros((NHXx, NHXy))
+Hy       = zeros((NHYx, NHYy))
 #for whole visible domain
 EzSQsum = zeros((canvasX, canvasY)) #sum of 'Ez^2's at each timestep we've averaged over
 EzRMSSQ = zeros((canvasX, canvasY)) #Ez_RMS^2
@@ -519,6 +537,8 @@ def reset():
   """Reset all field quantities and times"""
   global n
   global Ez
+  global Ezx
+  global Ezy
   global Hx
   global Hy
   global t
@@ -532,6 +552,8 @@ def reset():
   n = 0
   nCount = nStable
   Ez = zeros((NEZx, NEZy))
+  Ezx = zeros((NEZx, NEZy))
+  Ezy = zeros((NEZx, NEZy))
   maxEz = 1.0
   resetAveraging() #contains a conditionalRedraw()
   
@@ -607,6 +629,8 @@ def run():
 def step(avg=True):
   """Advances the field quantities by one timestep"""
   global Ez
+  global Ezx
+  global Ezy
   global EzVis
   global EzAn
   global Hz
@@ -620,12 +644,16 @@ def step(avg=True):
   global maxEz
   
   #take care of Hx and Hy using the standard Yee algorithm
-  Hx[HXx_range, HXy_range] = Hx[HXx_range, HXy_range] + Db*(Ez[HXx_range, HXy_range] - Ez[HXx_range, 1:(NHXy+1)]) #HXy_range+1
-  Hy[HYx_range, HYy_range] = Hy[HYx_range, HYy_range] + Db*(Ez[1:(NHYx+1), HYy_range] - Ez[HYx_range, HYy_range]) #HYx_range+1
+  Hx[HXx_range, HXy_range] = DaY*Hx[HXx_range, HXy_range] + DbY*(Ez[HXx_range, HXy_range] - Ez[HXx_range, 1:(NHXy+1)]) #HXy_range+1
+  Hy[HYx_range, HYy_range] = DaX*Hy[HYx_range, HYy_range] + DbX*(Ez[1:(NHYx+1), HYy_range] - Ez[HYx_range, HYy_range]) #HYx_range+1
     
   #do the normal Yee updates on Ez in the relevant range
-  Ez[EZx_range, EZy_range] = Ez[EZx_range, EZy_range] + Cb*(Hy[EZx_range, EZy_range] - Hy[0:(NEZx-2),EZy_range] + Hx[EZx_range, 0:NEZy-2] - Hx[EZx_range, EZy_range])
+  Ezx[EZx_range, EZy_range] = CaX*Ezx[EZx_range, EZy_range] + CbX*(Hy[EZx_range, EZy_range] - Hy[0:(NEZx-2),EZy_range])
+  Ezy[EZx_range, EZy_range] = CaY*Ezy[EZx_range, EZy_range] + CbY*(Hx[EZx_range, 0:NEZy-2] - Hx[EZx_range, EZy_range])
     
+  #Ez is the sum of the two split-field parts
+  Ez = Ezx + Ezy
+  
   #finially, update the time and the sources
   n += 1
 
