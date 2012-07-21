@@ -27,7 +27,7 @@ c        = 1/(mu0*epsilon0)**0.5
 canvasX = 600 #width of view canvas
 canvasY = 300 #height of view canvas
 barrierX = 100	#x position of the barrier
-pmlWidth = 9 #also includes 1 for the PEC
+pmlWidth = 16 #also includes 1 for the PEC
 
 Nx = canvasX - barrierX + pmlWidth	#width of the FDTD domain; overlaps anayltic domain by one and has pml on right side
 Ny = canvasY + 2*pmlWidth		#height of the FDTD domain; has pml on top and bottom
@@ -74,12 +74,30 @@ NHYy = Ny     #Hy goes all the way to y endpoints
 HYx_range = slice(0, NHYx) #all y positions updated using Yee
 HYy_range = slice(0, NHYy)
 
+#find the sigmas we want in the PML
+m   = 3		#order of polynominal PML grading
+ref = 1e-9	#desired reflection factor
+eta = sqrt(mu0/epsilon0)	#impediance of non-pml region
+wd   = (pmlWidth - 1)*d		#-1 since last cell is PEC
+sigmaMax = -(m+1)*log(1e-7)/2/eta/wd
+
+sigmas   = sigmaMax*((arange(pmlWidth-1) + 1.0)/(pmlWidth-1))**m	#sigmas for non-PEC part of PML
+sigmaSts = mu0/epsilon0*sigmas						#'sigma*' for the same
+
 #conductivities
 sigmaStX = zeros((NHYx,NHYy)) #used to update Hy
+sigmaStX[-pmlWidth:-1,:] = sigmaSts[:, newaxis] #just need it on the right side
+
 sigmaStY = zeros((NHXx,NHXy)) #used to update Hx
+sigmaStY[:,1:pmlWidth] = sigmaSts[::-1] #reverse order of 'sigma*'s so that largest is at bottom
+sigmaStY[:,-pmlWidth:-1] = sigmaSts
 
 sigmaX = zeros((NEZx-2,NEZy-2)) #used to update Ezx in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+sigmaX[-pmlWidth+1:] = sigmas[:, newaxis]
+
 sigmaY = zeros((NEZx-2,NEZy-2)) #used to update Ezy in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+sigmaY[:,-pmlWidth+1:] = sigmas
+sigmaY[:,:pmlWidth-1] = sigmas[::-1] #reverse order of sigmas so that largest is at bottom
 
 #Yee algorithm update coefficients
 CaX = (1-sigmaX*dt/2/epsilon0)/(1+sigmaX*dt/2/epsilon0)
@@ -87,10 +105,10 @@ CaY = (1-sigmaY*dt/2/epsilon0)/(1+sigmaY*dt/2/epsilon0)
 CbX = dt/epsilon0/d/(1+sigmaX*dt/2/epsilon0)
 CbY = dt/epsilon0/d/(1+sigmaY*dt/2/epsilon0)
 
-DaX = (1-sigmaStX*dt/2/epsilon0)/(1+sigmaStX*dt/2/epsilon0)
-DaY = (1-sigmaStY*dt/2/epsilon0)/(1+sigmaStY*dt/2/epsilon0)
-DbX = dt/mu0/d/(1+sigmaStX*dt/2/epsilon0)
-DbY = dt/mu0/d/(1+sigmaStY*dt/2/epsilon0)
+DaX = (1-sigmaStX*dt/2/mu0)/(1+sigmaStX*dt/2/mu0)
+DaY = (1-sigmaStY*dt/2/mu0)/(1+sigmaStY*dt/2/mu0)
+DbX = dt/mu0/d/(1+sigmaStX*dt/2/mu0)
+DbY = dt/mu0/d/(1+sigmaStY*dt/2/mu0)
 
 #NON-GUI GLOBAL VARIABLES------------------------------------------------------
 #time steps
@@ -554,6 +572,7 @@ def reset():
   Ez = zeros((NEZx, NEZy))
   Ezx = zeros((NEZx, NEZy))
   Ezy = zeros((NEZx, NEZy))
+  EzVis = zeros((canvasX,canvasY))
   maxEz = 1.0
   resetAveraging() #contains a conditionalRedraw()
   
