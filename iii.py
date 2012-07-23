@@ -27,10 +27,10 @@ c        = 1/(mu0*epsilon0)**0.5
 canvasX = 600 #width of view canvas
 canvasY = 300 #height of view canvas
 barrierX = 100	#x position of the barrier
-pmlWidth = 16 #also includes 1 for the PEC
+pmlWidth = 16 #width of the perfectly matched layer, not including the PEC boundary
 
-Nx = canvasX - barrierX + pmlWidth	#width of the FDTD domain; overlaps anayltic domain by one and has pml on right side
-Ny = canvasY + 2*pmlWidth		#height of the FDTD domain; has pml on top and bottom
+Nx = canvasX - barrierX + pmlWidth + 1	#width of the FDTD domain; overlaps anayltic domain by one and has PML + PEC on right side
+Ny = canvasY + 2*pmlWidth + 2		#height of the FDTD domain; has PML and PEC on top and bottom
   
 plotD = 100	#free dimension of 1D plots
   
@@ -55,8 +55,8 @@ NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the ed
 EZx_range = slice(1, NEZx-1) #right and left are PECs, so not updated using Yee algorithm
 EZy_range = slice(1, NEZy-1) #top and bottom are PECs, so not updated using Yee algorithm
 #range that's visible
-EZx_vis_range = slice(0, -pmlWidth)
-EZy_vis_range = slice(pmlWidth, -pmlWidth)
+EZx_vis_range = slice(0, -(pmlWidth+1))
+EZy_vis_range = slice((pmlWidth+1), -(pmlWidth+1))
 #range updated by analyitic formula:
 EZx_an_range = slice(0, barrierX+1)
 EZy_an_range = slice(0, canvasY) #only make as tall as the canvas
@@ -78,27 +78,27 @@ HYy_range = slice(0, NHYy)
 m   = 3		#order of polynominal PML grading
 ref = 1e-9	#desired reflection factor
 eta = sqrt(mu0/epsilon0)	#impediance of non-pml region
-wd   = (pmlWidth - 1)*d		#-1 since last cell is PEC
-sigmaMax   = -(m+1)*log(1e-7)/2/eta/wd
+wd   = pmlWidth*d	
+sigmaMax   = -(m+1)*log(ref)/2/eta/wd
 sigmaStMax = mu0/epsilon0*sigmaMax
 
-sigmas   = sigmaMax*((arange(pmlWidth-1) + 0.0)/(pmlWidth-1))**m	#sigmas for non-PEC part of PML
-sigmaSts = sigmaStMax*((arange(pmlWidth-1) + 0.5)/(pmlWidth-1))**m	#'sigma*' for the same
+sigmas   = sigmaMax*((arange(pmlWidth) + 0.0)/(pmlWidth))**m	#sigmas for non-PEC part of PML
+sigmaSts = sigmaStMax*((arange(pmlWidth) + 0.5)/(pmlWidth))**m	#'sigma*' for the same
 
 #conductivities
 sigmaStX = zeros((NHYx,NHYy)) #used to update Hy
-sigmaStX[-(pmlWidth-1):,:] = sigmaSts[:, newaxis] #just need it on the right side
+sigmaStX[-pmlWidth:,:] = sigmaSts[:, newaxis] #just need it on the right side
 
 sigmaStY = zeros((NHXx,NHXy)) #used to update Hx
-sigmaStY[:,:pmlWidth-1] = sigmaSts[::-1] #reverse order of 'sigma*'s so that largest is at bottom
-sigmaStY[:,-(pmlWidth-1):] = sigmaSts
+sigmaStY[:,:pmlWidth] = sigmaSts[::-1] #reverse order of 'sigma*'s so that largest is at bottom
+sigmaStY[:,-pmlWidth:] = sigmaSts
 
 sigmaX = zeros((NEZx-2,NEZy-2)) #used to update Ezx in EZx_range and EZy_range, so -2 since we don't update PEC barriers
-sigmaX[-pmlWidth+1:] = sigmas[:, newaxis]
+sigmaX[-pmlWidth:] = sigmas[:, newaxis]
 
 sigmaY = zeros((NEZx-2,NEZy-2)) #used to update Ezy in EZx_range and EZy_range, so -2 since we don't update PEC barriers
-sigmaY[:,-pmlWidth+1:] = sigmas
-sigmaY[:,:pmlWidth-1] = sigmas[::-1] #reverse order of sigmas so that largest is at bottom
+sigmaY[:,-pmlWidth:] = sigmas
+sigmaY[:,:pmlWidth] = sigmas[::-1] #reverse order of sigmas so that largest is at bottom
 
 #Yee algorithm update coefficients
 CaX = (1-sigmaX*dt/2/epsilon0)/(1+sigmaX*dt/2/epsilon0)
@@ -691,12 +691,12 @@ def step(avg=True):
     EzAn *= ((tr > 0).astype(float))/(1+exp(-(tr-3*tau)/tau))
   
   #now, copy the right edge of EzAn to the overlapping part of Ez's left edge
-  Ez[0,pmlWidth:-pmlWidth] = EzAn[-1,:]
+  Ez[0,(pmlWidth+1):-(pmlWidth+1)] = EzAn[-1,:]
   
   #now, enforce Ez=0 on barrier
   invGaps = invertedGaps()
   for i in range(0,len(invGaps),2):
-    Ez[0, invGaps[i]+pmlWidth:invGaps[i+1]+pmlWidth] = 0 #need to add pml offset since inverted gaps works on visible coordinate system    
+    Ez[0, invGaps[i]+pmlWidth+1:invGaps[i+1]+pmlWidth+1] = 0 #need to add PML and PEC offset since inverted gaps works on visible coordinate system    
   
   #now, stitch the two together to make the visible domain
   EzVis[EZx_an_range, :] = EzAn
