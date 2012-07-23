@@ -79,18 +79,19 @@ m   = 3		#order of polynominal PML grading
 ref = 1e-9	#desired reflection factor
 eta = sqrt(mu0/epsilon0)	#impediance of non-pml region
 wd   = (pmlWidth - 1)*d		#-1 since last cell is PEC
-sigmaMax = -(m+1)*log(1e-7)/2/eta/wd
+sigmaMax   = -(m+1)*log(1e-7)/2/eta/wd
+sigmaStMax = mu0/epsilon0*sigmaMax
 
-sigmas   = sigmaMax*((arange(pmlWidth-1) + 1.0)/(pmlWidth-1))**m	#sigmas for non-PEC part of PML
-sigmaSts = mu0/epsilon0*sigmas						#'sigma*' for the same
+sigmas   = sigmaMax*((arange(pmlWidth-1) + 0.0)/(pmlWidth-1))**m	#sigmas for non-PEC part of PML
+sigmaSts = sigmaStMax*((arange(pmlWidth-1) + 0.5)/(pmlWidth-1))**m	#'sigma*' for the same
 
 #conductivities
 sigmaStX = zeros((NHYx,NHYy)) #used to update Hy
-sigmaStX[-pmlWidth:-1,:] = sigmaSts[:, newaxis] #just need it on the right side
+sigmaStX[-(pmlWidth-1):,:] = sigmaSts[:, newaxis] #just need it on the right side
 
 sigmaStY = zeros((NHXx,NHXy)) #used to update Hx
-sigmaStY[:,1:pmlWidth] = sigmaSts[::-1] #reverse order of 'sigma*'s so that largest is at bottom
-sigmaStY[:,-pmlWidth:-1] = sigmaSts
+sigmaStY[:,:pmlWidth-1] = sigmaSts[::-1] #reverse order of 'sigma*'s so that largest is at bottom
+sigmaStY[:,-(pmlWidth-1):] = sigmaSts
 
 sigmaX = zeros((NEZx-2,NEZy-2)) #used to update Ezx in EZx_range and EZy_range, so -2 since we don't update PEC barriers
 sigmaX[-pmlWidth+1:] = sigmas[:, newaxis]
