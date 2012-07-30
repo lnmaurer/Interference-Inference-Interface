@@ -10,8 +10,9 @@ from PIL import Image, ImageTk, ImageDraw
 #NOTES
 """
 This code is mostly for the interface; almost all the numerics is done in step().
-The numerics impliments the Yee algorithm for a 2D TMz wave and 2nd order Mur RBCs
-on the top, bottom, and right edges of the simulation domain.
+The numerics impliments the Yee algorithm for a 2D TMz wave and split-field
+perfectly matched layers on the top, bottom, and right edges of the simulation
+domain.
 
 Speaking of which, the simulation domain is to the right of the barrier. To the
 left of the barrier, the values of the incoming plane wave are calculated
@@ -35,7 +36,7 @@ Ny = canvasY + 2*pmlWidth + 2		#height of the FDTD domain; has PML and PEC on to
 plotD = 100	#free dimension of 1D plots
   
 d  = 2.0/(canvasX-1)	#spatial grid element size
-dt = d/c/2**0.5	#time step -- this choice is good for a 2D simulation in vacuum
+dt = d/c/2**0.5	#time step -- this choice is good for a 2D simulation in vacuum, will modify shortly
 
 #the wave:
 lamb  = 20*d		#wavelength -- 20 points per wavelength yeilds good results
@@ -43,12 +44,12 @@ k     = 2*pi/lamb	#wavenumber
 omega = 2*pi*c/lamb	#angular frequency
 tau   = lamb/c		#time period
 
+dt = tau/ceil(tau/dt) #now, modify dt so that tau is an integer number of timesteps; this formulation makes dt less than or equal to its previous value, which is nescessary for stability
+
 #stability time step counts
 nStable = int((barrierX + sqrt((canvasX-barrierX)**2 + canvasY**2))*d/c/dt) #time steps until Ez beocmes stable: to barrier then longest way across right domain
-nAvgStable = int(10*tau/dt) #time steps of averaging to get the average stable (once Ez is already stable)
-
-
-  
+nAvgStable = round(tau/dt) #average for one cycle (once Ez is already stable)
+ 
 NEZx = Nx #number of Ez grid points in x direction -- goes all the way to the edge
 NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the edge
 #range updated by Yee algorithm:
