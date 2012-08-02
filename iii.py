@@ -48,7 +48,7 @@ dt = tau/ceil(tau/dt) #now, modify dt so that tau is an integer number of timest
 
 #stability time step counts
 nStable = int((barrierX + sqrt((canvasX-barrierX)**2 + canvasY**2))*d/c/dt) #time steps until Ez beocmes stable: to barrier then longest way across right domain
-nAvgStable = round(tau/dt) #average for one cycle (once Ez is already stable)
+nAvgStable = int(round(tau/dt)) #average for one cycle (once Ez is already stable)
  
 NEZx = Nx #number of Ez grid points in x direction -- goes all the way to the edge
 NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the edge
