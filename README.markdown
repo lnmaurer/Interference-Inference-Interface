@@ -27,7 +27,7 @@ For an example of a lab that uses this simulation, see the [worksheet](https://g
 
 The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.
 
-### If you have questions, contact @lnmaurer
+### If you have questions, contact (@lnmaurer)
 
 For more information about me, also see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
 
