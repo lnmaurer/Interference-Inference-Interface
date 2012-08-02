@@ -3,7 +3,7 @@
 
 This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.
 
-### The Interface
+### Interface
 
 Consider the upper left plot in the interface; it shows Ez. Black is the most negative value and white is the most positive value. An plane wave comes in from the left of the barrier (the vertical red line). This wave has a fixed wavelength of 20 grid cells. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the magnitude of this wave is ramped up gradually, to avoid potentially unstable high frequency components.
 
@@ -19,17 +19,17 @@ Finally, the openings in the barrier can be added, removed, and modified in the 
 
 The instructional lab computers (with Core 2 Duo processors) take ~55ms per simulation timestep, which results in a smooth animation. The simulation can be sped up using fast forward mode; it saves time by not updating the plots and runs until the current countdown is completed.
 
-### Use in lab
+### Instructional Laboratory
 
 For an example of a lab that uses this simulation, see the [worksheet](https://github.com/lnmaurer/Interference-Diffraction-Worksheet) I used.
 
-### The Code
+### Code
 
 The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.
 
-### If you have questions, contact (@lnmaurer)
+### Contact
 
-For more information about me, also see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
+If you have any questions, don't hesistate to contact me (@lnmaurer). For more information about me, also see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
 
 ### The code is available under the [GNU Public License Version 2](http://www.gnu.org/licenses/gpl-2.0.html)
 
