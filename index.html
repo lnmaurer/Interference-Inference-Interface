@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Interference-inference-interface by lnmaurer</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Interference-inference-interface</h1>
+        <p>Simulation for 2D interference and diffraction for use in instructional labs.</p>
+
+        <p class="view"><a href="https://github.com/lnmaurer/Interference-Inference-Interface">View the Project on GitHub <small>lnmaurer/Interference-Inference-Interface</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/lnmaurer/Interference-Inference-Interface/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/lnmaurer/Interference-Inference-Interface">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>Interference Inference Interface</h1>
+
+<p><img src="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png" alt="The graphical user interface."></p>
+
+<p>This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.</p>
+
+<p><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png">Full size picture of the interface</a></p>
+
+<h3>Interface</h3>
+
+<p>Consider the upper left plot in the interface; it shows Ez. Black is the most negative value and white is the most positive value. An plane wave comes in from the left of the barrier (the vertical red line). This wave has a fixed wavelength of 20 grid cells. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the magnitude of this wave is ramped up gradually, to avoid potentially unstable high frequency components.</p>
+
+<p>The barrier is a perfect electric conductor, and the openings in the barrier are hard sources that inject the waves in to the FDTD domain, the area to the right of the barrier. The other three sides of the FDTD domain are terminated with split-field perfectly matched layers. These reduce reflections from the boundaries to imperceptible levels, effectively giving the simulation open boundaries.</p>
+
+<p>The bottom left plot shows Ezrms by default; it can also be set to show Ezrms^2 (proportional to intensity). In both cases, black is zero, and white is the maximum value. When the simulation starts or the barrier is modified, a timer appears over this plot, counting down until steady state is reached. After that, the averaging of Ezrms restarts to remove transients, and another timer appears, counting down until one time period is averaged.</p>
+
+<p>Horizontal and vertical dashed lines are visible in both of these plots. Ez (yellow) and sqrt(2)*Ezrms (green, as an envelope) are shown along these vertical and horizontal slices in the remaining three plots (the two vertical plots are identical). The distances from the centers of the barrier's openings to the intersection of the slices is shown in cyan on the 2D plots and in the barrier control frame to the right.</p>
+
+<p>x, y, Ez, and Ezrms at the point the slices intersect are shown in the center right area between the plots for the vertical slice. This is useful for homing in on maxima and minima; the slices can be moved either with the mouse or keyboard.</p>
+
+<p>Finally, the openings in the barrier can be added, removed, and modified in the barrier control frame at the right of the interface.</p>
+
+<p>The instructional lab computers (with Core 2 Duo processors) take ~55ms per simulation timestep, which results in a smooth animation. The simulation can be sped up using fast forward mode; it saves time by not updating the plots and runs until the current countdown is completed.</p>
+
+<h3>Instructional Laboratory</h3>
+
+<p>For an example of a lab that uses this simulation, see the <a href="https://github.com/lnmaurer/Interference-Diffraction-Worksheet">worksheet</a> I used.</p>
+
+<h3>Code</h3>
+
+<p>The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.</p>
+
+<h3>Notes</h3>
+
+<ul>
+<li> There's an executable for Window available on the <a href="https://github.com/lnmaurer/Interference-Inference-Interface/downloads">downloads page</a>
+
+<ul>
+<li>I'll make other downloads available eventually</li>
+<li>The executable makes a folder when it's run. It'll delete the folder when it exits if it exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.</li>
+</ul>
+</li>
+<li> This code works with Python 2.7</li>
+<li> This program requires three libraries
+
+<ul>
+<li> <a href="http://numpy.scipy.org/">Numpy</a>
+</li>
+<li> TkInter, which is part of the default Python install</li>
+<li> <a href="http://www.pythonware.com/products/pil/">Python Imaging Library</a>. The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's <a href="https://trac.macports.org/browser/trunk/dports/python/py-pil/Portfile">available</a> through MacPorts.</li>
+</ul>
+</li>
+</ul><h3>Contact</h3>
+
+<p>If you have any questions, don't hesitate to contact me (<a href="https://github.com/lnmaurer" class="user-mention">@lnmaurer</a>). For more information about me, see my <a href="https://mywebspace.wisc.edu/lnmaurer/web/">webpage</a></p>
+
+<h3>The code is available under the <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU Public License Version 2</a>
+</h3>
+
+<p>This program is free software; you can redistribute it and/or
+  modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation; using version 2
+  of the License.</p>
+
+<p>This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.</p>
+
+<p>You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/lnmaurer">lnmaurer</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-33833025-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
