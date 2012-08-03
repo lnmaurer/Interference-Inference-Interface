@@ -3,6 +3,8 @@
 
 This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.
 
+[Full size picture of the interface](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
+
 ### Interface
 
 Consider the upper left plot in the interface; it shows Ez. Black is the most negative value and white is the most positive value. An plane wave comes in from the left of the barrier (the vertical red line). This wave has a fixed wavelength of 20 grid cells. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the magnitude of this wave is ramped up gradually, to avoid potentially unstable high frequency components.
@@ -28,7 +30,7 @@ For an example of a lab that uses this simulation, see the [worksheet](https://g
 The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.
 
 ### Notes
--  There's an executable for Window avaible one the [downloads page](https://github.com/lnmaurer/Interference-Inference-Interface/downloads)
+-  There's an executable for Window available on the [downloads page](https://github.com/lnmaurer/Interference-Inference-Interface/downloads)
   - I'll make other downloads available eventually
   - The executable makes a folder when it's run. It'll delete the folder when it exits if it exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
 -  This code works with Python 2.7
@@ -39,7 +41,7 @@ The software is written in Python using NumPy for the calculations, TkInter for 
 
 ### Contact
 
-If you have any questions, don't hesistate to contact me (@lnmaurer). For more information about me, also see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
+If you have any questions, don't hesitate to contact me (@lnmaurer). For more information about me, see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
 
 ### The code is available under the [GNU Public License Version 2](http://www.gnu.org/licenses/gpl-2.0.html)
 
