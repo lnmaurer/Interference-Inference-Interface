@@ -782,8 +782,7 @@ menubar.add_cascade(label="Simulation", menu=simmenu)
 
 #the help menu
 helpmenu = Tkinter.Menu(menubar, tearoff=0)
-helpmenu.add_command(label="Ask if you need help", state="disabled")
-helpmenu.add_command(label="About", command=lambda: tkMessageBox.showinfo("About", "Leon's New Fangled Interference & Diffraction Simulator\n\nCopyright 2012 by Leon Maurer\n\nCode available under GNU Public License Version 2"))
+helpmenu.add_command(label="About", command=lambda: tkMessageBox.showinfo("About", "The Interference Inference Interface\n\nhttp://lnmaurer.github.com/Interference-Inference-Interface\n\nCopyright 2012 by Leon Maurer\n\nCode available under GNU Public License Version 2"))
 menubar.add_cascade(label="Help", menu=helpmenu)
 
 root.config(menu=menubar)

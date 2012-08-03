@@ -27,6 +27,14 @@ For an example of a lab that uses this simulation, see the [worksheet](https://g
 
 The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.
 
+### Notes
+-  I'll post executable files presently
+-  This code works with Python 2.7
+-  This program requires three libraries
+  -  [Numpy](http://numpy.scipy.org/)
+  -  TkInter, which is part of the default Python install
+  -  [Python Imaging Library](http://www.pythonware.com/products/pil/). The only availble downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's [available](https://trac.macports.org/browser/trunk/dports/python/py-pil/Portfile) through MacPorts.
+
 ### Contact
 
 If you have any questions, don't hesistate to contact me (@lnmaurer). For more information about me, also see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
