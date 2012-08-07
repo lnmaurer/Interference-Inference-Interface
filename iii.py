@@ -559,6 +559,7 @@ def reset():
   global Ez
   global Ezx
   global Ezy
+  global EzVis
   global Hx
   global Hy
   global t
@@ -782,7 +783,7 @@ menubar.add_cascade(label="Simulation", menu=simmenu)
 
 #the help menu
 helpmenu = Tkinter.Menu(menubar, tearoff=0)
-helpmenu.add_command(label="About", command=lambda: tkMessageBox.showinfo("About", "The Interference Inference Interface\n\nhttp://lnmaurer.github.com/Interference-Inference-Interface\n\nCopyright 2012 by Leon Maurer\n\nCode available under GNU Public License Version 2"))
+helpmenu.add_command(label="About", command=lambda: tkMessageBox.showinfo("About", "The Interference Inference Interface\n\nhttp://lnmaurer.github.com/Interference-Inference-Interface\n\nCommit #67\n\nCopyright 2012 by Leon Maurer\n\nCode available under GNU Public License Version 2"))
 menubar.add_cascade(label="Help", menu=helpmenu)
 
 root.config(menu=menubar)
