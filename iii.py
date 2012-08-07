@@ -733,19 +733,19 @@ menubar = Tkinter.Menu(root)
 
 #the file menu
 filemenu = Tkinter.Menu(menubar, tearoff=0)
-filemenu.add_command(label="Export Data", accelerator="Ctrl+E", command=exportData)
+filemenu.add_command(label="Export Data", accelerator="Command+E", command=exportData)
 filemenu.add_separator()
-filemenu.add_command(label="Exit", accelerator="Ctrl+Q", command=root.quit)
+filemenu.add_command(label="Exit", accelerator="Command+Q", command=root.quit)
 #bind keys to the actions
-root.bind_all('<Control-e>', lambda arg: exportData())
-root.bind_all('<Control-q>', lambda arg: root.quit())
+root.bind_all('<Command-e>', lambda arg: exportData())
+root.bind_all('<Command-q>', lambda arg: root.quit())
 menubar.add_cascade(label="File", menu=filemenu)
 
 #the edit menu
 editmenu = Tkinter.Menu(menubar, tearoff=0)
-editmenu.add_command(label="Cut", accelerator="Ctrl+X", command=lambda: root.event_generate('<Control-x>'))
-editmenu.add_command(label="Copy", accelerator="Ctrl+C", command=lambda: root.event_generate('<Control-c>'))
-editmenu.add_command(label="Paste", accelerator="Ctrl+V", command=lambda: root.event_generate('<Control-v>'))
+editmenu.add_command(label="Cut", accelerator="Command+X", command=lambda: root.event_generate('<Command-x>'))
+editmenu.add_command(label="Copy", accelerator="Command+C", command=lambda: root.event_generate('<Command-c>'))
+editmenu.add_command(label="Paste", accelerator="Command+V", command=lambda: root.event_generate('<Command-v>'))
 menubar.add_cascade(label="Edit", menu=editmenu)
 
 #the view menu
@@ -769,16 +769,16 @@ menubar.add_cascade(label="View", menu=viewmenu)
 
 #the simulation menu
 simmenu = Tkinter.Menu(menubar, tearoff=0)
-simmenu.add_command(label="Run", accelerator="Ctrl+R", command=start)
-root.bind("<Control-r>", lambda arg: start())
-simmenu.add_command(label="Stop", accelerator="Ctrl+S", command=stop)
-root.bind("<Control-s>", lambda arg: stop())
-simmenu.add_command(label="Reset Simulation", accelerator="Ctrl+Shift+R", command=reset)
-root.bind("<Control-R>", lambda arg: reset())
-simmenu.add_command(label="Reset Average", accelerator="Ctrl+Shift+A", command=resetAveraging)
+simmenu.add_command(label="Run", accelerator="Command+R", command=start)
+root.bind("<Command-r>", lambda arg: start())
+simmenu.add_command(label="Stop", accelerator="Command+S", command=stop)
+root.bind("<Command-s>", lambda arg: stop())
+simmenu.add_command(label="Reset Simulation", accelerator="Command+Shift+R", command=reset)
+root.bind("<Command-R>", lambda arg: reset())
+simmenu.add_command(label="Reset Average", accelerator="Command+Shift+A", command=resetAveraging)
 root.bind("<Shift-A>", lambda arg: resetAveraging())
-simmenu.add_command(label="Fast Forward", accelerator="Ctrl+F", command=fastForward)
-root.bind("<Control-f>", lambda arg: fastForward())
+simmenu.add_command(label="Fast Forward", accelerator="Command+F", command=fastForward)
+root.bind("<Command-f>", lambda arg: fastForward())
 menubar.add_cascade(label="Simulation", menu=simmenu)
 
 #the help menu
