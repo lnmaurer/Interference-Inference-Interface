@@ -32,6 +32,7 @@ The software is written in Python using NumPy for the calculations, TkInter for 
 ### Notes
 -  There's an executable for Window available on the [downloads page](https://github.com/lnmaurer/Interference-Inference-Interface/downloads)
   - I'll make other downloads available eventually
+    - I'll make an OS X version once [this bug](http://bugs.python.org/issue15574) in the OS X version of TkInter is fixed
   - The executable makes a folder when it's run. It'll delete the folder when it exits if it exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
 -  This code works with Python 2.7
 -  This program requires three libraries
