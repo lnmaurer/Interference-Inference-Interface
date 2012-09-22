@@ -5,46 +5,55 @@ This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teac
 
 [Full size picture of the interface](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
 
-### Interface
+## Downloads
 
-Consider the upper left plot in the interface; it shows Ez. Black is the most negative value and white is the most positive value. An plane wave comes in from the left of the barrier (the vertical red line). This wave has a fixed wavelength of 20 grid cells. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the magnitude of this wave is ramped up gradually, to avoid potentially unstable high frequency components.
+### Windows
+There's an executable for Window available on the [downloads page](https://github.com/lnmaurer/Interference-Inference-Interface/downloads). Just double click it to run. Note that The executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
 
-The barrier is a perfect electric conductor, and the openings in the barrier are hard sources that inject the waves in to the FDTD domain, the area to the right of the barrier. The other three sides of the FDTD domain are terminated with split-field perfectly matched layers. These reduce reflections from the boundaries to imperceptible levels, effectively giving the simulation open boundaries.
+### OS X
+I'll try making an OS X version once [this bug](http://bugs.python.org/issue15574) in the OS X version of TkInter is fixed. But for now, the OS X version of TkInter is too buggy.
 
-The bottom left plot shows Ezrms by default; it can also be set to show Ezrms^2 (proportional to intensity). In both cases, black is zero, and white is the maximum value. When the simulation starts or the barrier is modified, a timer appears over this plot, counting down until steady state is reached. After that, the averaging of Ezrms restarts to remove transients, and another timer appears, counting down until one time period is averaged.
+### Linux
+I haven't made an executable for linux yet because it's easy to get the needed libraries. For exaple, Ubuntu 12.04 comes with python 2.7 by default, so ``sudo apt-get install python-numpy python-imaging`` will install the necessary libraries. After that, ```iii.py`` -- available [here](https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master) -- can be run on the command line with ``python iii.py``
 
-Horizontal and vertical dashed lines are visible in both of these plots. Ez (yellow) and sqrt(2)*Ezrms (green, as an envelope) are shown along these vertical and horizontal slices in the remaining three plots (the two vertical plots are identical). The distances from the centers of the barrier's openings to the intersection of the slices is shown in cyan on the 2D plots and in the barrier control frame to the right.
+I understand the next version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. ``sudo apt-get install python2.7 python2.7-numpy python2.7-imaging`` then run it with ``python2.7 iii.py``.
 
-x, y, Ez, and Ezrms at the point the slices intersect are shown in the center right area between the plots for the vertical slice. This is useful for homing in on maxima and minima; the slices can be moved either with the mouse or keyboard.
+## Interface
 
-Finally, the openings in the barrier can be added, removed, and modified in the barrier control frame at the right of the interface.
+The interface shows a TMz wave with five plots. The two large plots show Ez (upper plot) and EzRMS (lower plot) throughout the simulation's domain. For both, black is the smallest value and white is the largest value, with shades of gray in between. The three smaller plots show Ez and +/-sqrt(2)*EzRMS -- an envelope for Ez -- along the horizontal and vertical dashed lines through the two larger plots. Those lines can be moved with the keyboard or mouse, and x, y, Ez, and EzRMS at those lines' intersection is displayed in center right area between the two vertical plots. Knowing EzRMS at that point allows users to home in on extrema.
 
-The instructional lab computers (with Core 2 Duo processors) take ~55ms per simulation timestep, which results in a smooth animation. The simulation can be sped up using fast forward mode; it saves time by not updating the plots and runs until the current countdown is completed.
+A plane wave -- with a wavelength of 20 grid cells -- enters from the left. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the wave's magnitude is ramped up gradually to avoid potentially unstable high frequency components.
 
-### Instructional Laboratory
+The barrier -- visible in both large plots -- is a perfect electric conductor, and the openings in the barrier are hard sources that inject the incoming wave in to the FDTD domain, the area to the right of the barrier. Split-field perfectly matched layers terminate the other three sides of the FDTD domain. This boundary reduces reflections to imperceptible levels, effectively giving the simulation open boundaries.
+
+When the simulation starts or the barrier is modified, a timer appears over the EzRMS plot -- counting down until steady state is reached. Afterwards, EzRMS is reset to remove transients, and another timer appears for one time period of the wave. EzRMS is averaged over that time.
+
+Openings in the barrier can be added, removed, and modified using the barrier control frame -- at the right of the interface.
+
+Among its other features, the simulation has also has a fast forward mode, which saves time by not updating the plots. When in that mode, the simulation runs until the current countdown is done.
+
+The laboratory's computers -- running Windows with Intel Core 2 Duo processors -- take about 55ms per simulation timestep, resulting in a smooth animation.
+
+## Instructional Laboratory
 
 For an example of a lab that uses this simulation, see the [worksheet](https://github.com/lnmaurer/Interference-Diffraction-Worksheet) I used.
 
-### Code
+## Code
 
 The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.
 
-### Notes
--  There's an executable for Window available on the [downloads page](https://github.com/lnmaurer/Interference-Inference-Interface/downloads)
-  - I'll make other downloads available eventually
-    - I'll make an OS X version once [this bug](http://bugs.python.org/issue15574) in the OS X version of TkInter is fixed
-  - The executable makes a folder when it's run. It'll delete the folder when it exits if it exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
--  This code works with Python 2.7
+## Notes
+-  This code works with Python 2.7; I'll probably make it compatible with Python 3 eventually -- once all the libraries have Python 3 versions.
 -  This program requires three libraries
   -  [Numpy](http://numpy.scipy.org/)
   -  TkInter, which is part of the default Python install
   -  [Python Imaging Library](http://www.pythonware.com/products/pil/). The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's [available](https://trac.macports.org/browser/trunk/dports/python/py-pil/Portfile) through MacPorts.
 
-### Contact
+## Contact
 
 If you have any questions, don't hesitate to contact me (@lnmaurer). For more information about me, see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
 
-### The code is available under the [GNU Public License Version 2](http://www.gnu.org/licenses/gpl-2.0.html)
+## The code is available under the [GNU Public License Version 2](http://www.gnu.org/licenses/gpl-2.0.html)
 
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License
