@@ -30,11 +30,12 @@
       <section>
         <h1>Interference Inference Interface</h1>
 
-<p><img src="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png" alt="The graphical user interface."></p>
+<p><img src="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png" alt="The graphical user interface.">
+(If that picture isn't full-sized, check it out <a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png">here</a>.)</p>
 
 <p>This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.</p>
 
-<p><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png">Full size picture of the interface</a></p>
+<p><strong><a href="http://www.youtube.com/watch?v=6QLj8_f9QYg">Here</a>'s a short video introduction to the program.</strong></p>
 
 <h2>Downloads</h2>
 
@@ -44,13 +45,13 @@
 
 <h3>OS X</h3>
 
-<p>I'll try making an OS X version once <a href="http://bugs.python.org/issue15574">this bug</a> in the OS X version of TkInter is fixed. But for now, the OS X version of TkInter is too buggy.</p>
+<p>I'll again try making an OS X version once <a href="http://bugs.python.org/issue15574">this bug</a> in the OS X version of TkInter is fixed. But for now, the OS X version of TkInter is too buggy. I realize that bug isn't a show stopper, but I'm using it as a barometer for more serious problems that are; they may have the same root cause. If the problem doesn't get fixed, maybe I'll move to another interface toolkit, like Qt.</p>
 
 <h3>Linux</h3>
 
-<p>It can be installed from a Debian package -- tested under Ubuntu 12.04 -- available on the <a href="https://github.com/lnmaurer/Interference-Inference-Interface/downloads">downloads page</a>.</p>
+<p>I've made a Debian package -- tested under Ubuntu 12.04 -- available on the <a href="https://github.com/lnmaurer/Interference-Inference-Interface/downloads">downloads page</a>.</p>
 
-<p>If you're running something else, it's probably easy to get the needed libraries. For exaple, Ubuntu 12.04 comes with python 2.7 by default, so <code>sudo apt-get install python-numpy python-imaging python-imaging-tk</code> will install the necessary libraries. After that, `<code>iii.py</code> -- available <a href="https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master">here</a> -- can be run on the command line with <code>python iii.py</code></p>
+<p>If you're running something else, it's probably easy to get the needed libraries and get running. For example, Ubuntu 12.04 comes with python 2.7 by default, so <code>sudo apt-get install python-numpy python-imaging python-imaging-tk</code> will install the necessary libraries. After that, `<code>iii.py</code> -- available <a href="https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master">here</a> -- can be run on the command line with <code>python iii.py</code></p>
 
 <p>I understand the next version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. <code>sudo apt-get install python2.7 python2.7-numpy python2.7-imaging python2.7-imaging-tk</code> then run it with <code>python2.7 iii.py</code>.</p>
 
