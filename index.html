@@ -40,23 +40,27 @@
 
 <h3>Windows</h3>
 
-<p>There's an executable for Window available on the <a href="https://github.com/lnmaurer/Interference-Inference-Interface/downloads">downloads page</a>. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.</p>
+<p><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.exe">Here</a>'s a Window executable. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.</p>
 
 <h3>OS X</h3>
 
-<p>Unfortunately, a known and unfixable <a href="http://mail.python.org/pipermail/tkinter-discuss/2013-January/003343.html">bug</a> in the interface library can make the interface unresponsive when the simulation is running on OS X. There's a work-around by making the interface refresh less often, but that makes the animation slower and choppier. I'm still investigating my options, but it may take a completely re-written interface (using a different library) to get this working nicely on OS X.</p>
+<p><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.zip">Here</a>'s an OS X executable in a zip file. Unzip it and then double click it to run.</p>
+
+<p>Unfortunately, a known and apparently unfixable <a href="http://mail.python.org/pipermail/tkinter-discuss/2013-January/003343.html">bug</a> in the interface library can make the interface unresponsive when the simulation is running on OS X. This code is using a workaround that seems to be effective, but it's possible you'll run in to problems. If so, don't hesitate to contact me.</p>
+
+<p>Even with this workaround, the simulation runs more slowly -- making the animation more coppy -- on OS X.</p>
 
 <h3>Linux</h3>
 
-<p>I've made a Debian package -- tested under Ubuntu 12.04 -- available on the <a href="https://github.com/lnmaurer/Interference-Inference-Interface/downloads">downloads page</a>.</p>
+<p>I've made a Debian package -- tested under Ubuntu 12.10 -- available <a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/interference-inference-interface-69.deb">here</a>.</p>
 
 <p>If you're running something else, it's probably easy to get the needed libraries and get running. For example, Ubuntu 12.04 comes with python 2.7 by default, so <code>sudo apt-get install python-numpy python-imaging python-imaging-tk</code> will install the necessary libraries. After that, `<code>iii.py</code> -- available <a href="https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master">here</a> -- can be run on the command line with <code>python iii.py</code></p>
 
-<p>I understand the next version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. <code>sudo apt-get install python2.7 python2.7-numpy python2.7-imaging python2.7-imaging-tk</code> then run it with <code>python2.7 iii.py</code>.</p>
+<p>I understand a future version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. <code>sudo apt-get install python2.7 python2.7-numpy python2.7-imaging python2.7-imaging-tk</code> then run it with <code>python2.7 iii.py</code>.</p>
 
 <h2>Interface</h2>
 
-<p>The interface shows a TMz wave with five plots. The two large plots show Ez (upper plot) and EzRMS (lower plot) throughout the simulation's domain. For both, black is the smallest value and white is the largest value, with shades of gray in between. The three smaller plots show Ez and +/-sqrt(2)*EzRMS -- an envelope for Ez -- along the horizontal and vertical dashed lines through the two larger plots. Those lines can be moved with the keyboard or mouse, and x, y, Ez, and EzRMS at those lines' intersection is displayed in center right area between the two vertical plots. Knowing EzRMS at that point allows users to home in on extrema.</p>
+<p>The interface shows a TMz wave with five plots. The two large plots show Ez (upper plot) and EzRMS (lower plot) throughout the simulation's domain. For both, black is the smallest value and white is the largest value, with shades of gray in between. The three smaller plots show Ez and +/-sqrt(2)*EzRMS -- an envelope for Ez -- along the horizontal and vertical dashed lines through the two larger plots. Those lines can be moved with the keyboard or mouse, and x, y, Ez, and EzRMS at those lines' intersection is displayed in the center right area between the two vertical plots. Knowing EzRMS at that point allows users to home in on extrema.</p>
 
 <p>A plane wave -- with a wavelength of 20 grid cells -- enters from the left. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the wave's magnitude is ramped up gradually to avoid potentially unstable high frequency components.</p>
 
@@ -76,7 +80,7 @@
 
 <h2>Code</h2>
 
-<p>The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so -- in principle -- the program can run on any of those platforms.</p>
+<p>The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux.</p>
 
 <h2>Notes</h2>
 
@@ -88,7 +92,7 @@
 <li> <a href="http://numpy.scipy.org/">Numpy</a>
 </li>
 <li> TkInter, which is part of the default Python install</li>
-<li> <a href="http://www.pythonware.com/products/pil/">Python Imaging Library</a>. The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's <a href="https://trac.macports.org/browser/trunk/dports/python/py-pil/Portfile">available</a> through MacPorts.</li>
+<li> <a href="http://www.pythonware.com/products/pil/">Python Imaging Library</a>. The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's available through package managers like pip and MacPorts.</li>
 </ul>
 </li>
 </ul><h2>Contact</h2>
