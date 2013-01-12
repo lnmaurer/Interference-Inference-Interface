@@ -469,8 +469,8 @@ def redrawCanvases():
       #draw text showing the distances
       yText = (yGap + sliceY)/2
       xText = (barrierX+sliceX)/2
-      Ezcanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("Helvetica", "12"))
-      EzRMScanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("Helvetica", "12"))
+      Ezcanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("Helvetica", "20"))
+      EzRMScanvas.create_text(xText, yText, text=distStrVar.get(), fill="Cyan", font=("Helvetica", "20"))
   
   #now, draw the horizontal slice
   lineID = Ezcanvas.create_line([(0,sliceY),(canvasX,sliceY)], width=1, fill='yellow', dash='-') 
@@ -654,6 +654,7 @@ def run():
     redrawCanvases()
     print str(time.clock()-timer)
     if not fastForwarding:
+      root.update() #needed to deal with OS X Tk problems (http://code.activestate.com/lists/tcl-mac/1548/), although the side effect is that the simulation stops if you click on a menu
       root.after(1,run)
   
 def step(avg=True):
