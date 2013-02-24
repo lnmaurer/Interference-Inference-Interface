@@ -1,26 +1,33 @@
 # Interference Inference Interface
 ![The graphical user interface.](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
+[Full-sized image](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
 
 This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.
 
-[Full size picture of the interface](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
+**[Here](http://www.youtube.com/watch?v=6QLj8_f9QYg)'s a short video introduction to the program.**
 
 ## Downloads
 
 ### Windows
-There's an executable for Window available on the [downloads page](https://github.com/lnmaurer/Interference-Inference-Interface/downloads). Just double click it to run. Note that The executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
+[Here](https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.exe)'s a Window executable. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
 
 ### OS X
-I'll try making an OS X version once [this bug](http://bugs.python.org/issue15574) in the OS X version of TkInter is fixed. But for now, the OS X version of TkInter is too buggy.
+[Here](https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.zip)'s an OS X executable in a zip file. Unzip it and then double click it to run.
+
+Unfortunately, a known and apparently unfixable [bug](http://mail.python.org/pipermail/tkinter-discuss/2013-January/003343.html) in the interface library can make the interface unresponsive when the simulation is running on OS X. This code is using a workaround that seems to be effective, but it's possible you'll run in to problems. If so, don't hesitate to contact me.
+
+Even with this workaround, the simulation runs more slowly -- making the animation more coppy -- on OS X.
 
 ### Linux
-I haven't made an executable for linux yet because it's easy to get the needed libraries. For exaple, Ubuntu 12.04 comes with python 2.7 by default, so ``sudo apt-get install python-numpy python-imaging`` will install the necessary libraries. After that, ```iii.py`` -- available [here](https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master) -- can be run on the command line with ``python iii.py``
+I've made a Debian package -- tested under Ubuntu 12.10 -- available [here](https://mywebspace.wisc.edu/lnmaurer/web/iii/interference-inference-interface-69.deb).
 
-I understand the next version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. ``sudo apt-get install python2.7 python2.7-numpy python2.7-imaging`` then run it with ``python2.7 iii.py``.
+If you're running something else, it's probably easy to get the needed libraries and get running. For example, Ubuntu 12.04 comes with python 2.7 by default, so ``sudo apt-get install python-numpy python-imaging python-imaging-tk`` will install the necessary libraries. After that, ```iii.py`` -- available [here](https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master) -- can be run on the command line with ``python iii.py``
+
+I understand a future version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. ``sudo apt-get install python2.7 python2.7-numpy python2.7-imaging python2.7-imaging-tk`` then run it with ``python2.7 iii.py``.
 
 ## Interface
 
-The interface shows a TMz wave with five plots. The two large plots show Ez (upper plot) and EzRMS (lower plot) throughout the simulation's domain. For both, black is the smallest value and white is the largest value, with shades of gray in between. The three smaller plots show Ez and +/-sqrt(2)*EzRMS -- an envelope for Ez -- along the horizontal and vertical dashed lines through the two larger plots. Those lines can be moved with the keyboard or mouse, and x, y, Ez, and EzRMS at those lines' intersection is displayed in center right area between the two vertical plots. Knowing EzRMS at that point allows users to home in on extrema.
+The interface shows a TMz wave with five plots. The two large plots show Ez (upper plot) and EzRMS (lower plot) throughout the simulation's domain. For both, black is the smallest value and white is the largest value, with shades of gray in between. The three smaller plots show Ez and +/-sqrt(2)*EzRMS -- an envelope for Ez -- along the horizontal and vertical dashed lines through the two larger plots. Those lines can be moved with the keyboard or mouse, and x, y, Ez, and EzRMS at those lines' intersection is displayed in the center right area between the two vertical plots. Knowing EzRMS at that point allows users to home in on extrema.
 
 A plane wave -- with a wavelength of 20 grid cells -- enters from the left. Rather than simulate the incoming wave, it is calculated analytically. At the start of the simulation, the wave's magnitude is ramped up gradually to avoid potentially unstable high frequency components.
 
@@ -40,14 +47,14 @@ For an example of a lab that uses this simulation, see the [worksheet](https://g
 
 ## Code
 
-The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux, so the program can run on any of those platforms. I will post executables presently.
+The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux.
 
 ## Notes
 -  This code works with Python 2.7; I'll probably make it compatible with Python 3 eventually -- once all the libraries have Python 3 versions.
 -  This program requires three libraries
   -  [Numpy](http://numpy.scipy.org/)
   -  TkInter, which is part of the default Python install
-  -  [Python Imaging Library](http://www.pythonware.com/products/pil/). The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's [available](https://trac.macports.org/browser/trunk/dports/python/py-pil/Portfile) through MacPorts.
+  -  [Python Imaging Library](http://www.pythonware.com/products/pil/). The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's available through package managers like pip and MacPorts.
 
 ## Contact
 
