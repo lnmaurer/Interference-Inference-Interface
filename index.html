@@ -28,37 +28,43 @@
         </ul>
       </header>
       <section>
-        <h1>Interference Inference Interface</h1>
+        <h1>
+<a name="interference-inference-interface" class="anchor" href="#interference-inference-interface"><span class="octicon octicon-link"></span></a>Interference Inference Interface</h1>
 
-<p><img src="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png" alt="The graphical user interface."><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png">Full-sized image</a></p>
+<p><img src="http://www.physics.wisc.edu/%7Elmaurer/code/iii/double_slit.png" alt="The graphical user interface."><a href="http://www.physics.wisc.edu/%7Elmaurer/code/iii/double_slit.png">Full-sized image</a></p>
 
 <p>This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.</p>
 
 <p><strong><a href="http://www.youtube.com/watch?v=6QLj8_f9QYg">Here</a>'s a short video introduction to the program.</strong></p>
 
-<h2>Downloads</h2>
+<h2>
+<a name="downloads" class="anchor" href="#downloads"><span class="octicon octicon-link"></span></a>Downloads</h2>
 
-<h3>Windows</h3>
+<h3>
+<a name="windows" class="anchor" href="#windows"><span class="octicon octicon-link"></span></a>Windows</h3>
 
-<p><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.exe">Here</a>'s a Window executable. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.</p>
+<p><a href="http://www.physics.wisc.edu/%7Elmaurer/code/iii/iii.exe">Here</a>'s a Window executable. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.</p>
 
-<h3>OS X</h3>
+<h3>
+<a name="os-x" class="anchor" href="#os-x"><span class="octicon octicon-link"></span></a>OS X</h3>
 
-<p><a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.zip">Here</a>'s an OS X executable in a zip file. Unzip it and then double click it to run.</p>
+<p><a href="http://www.physics.wisc.edu/%7Elmaurer/code/iii/iii.zip">Here</a>'s an OS X executable in a zip file. Unzip it and then double click it to run.</p>
 
 <p>Unfortunately, a known and apparently unfixable <a href="http://mail.python.org/pipermail/tkinter-discuss/2013-January/003343.html">bug</a> in the interface library can make the interface unresponsive when the simulation is running on OS X. This code is using a workaround that seems to be effective, but it's possible you'll run in to problems. If so, don't hesitate to contact me.</p>
 
 <p>Even with this workaround, the simulation runs more slowly -- making the animation more coppy -- on OS X.</p>
 
-<h3>Linux</h3>
+<h3>
+<a name="linux" class="anchor" href="#linux"><span class="octicon octicon-link"></span></a>Linux</h3>
 
-<p>I've made a Debian package -- tested under Ubuntu 12.10 -- available <a href="https://mywebspace.wisc.edu/lnmaurer/web/iii/interference-inference-interface-69.deb">here</a>.</p>
+<p>I've made a Debian package -- tested under Ubuntu 12.10 -- available <a href="http://www.physics.wisc.edu/%7Elmaurer/code/iii/interference-inference-interface-69.deb">here</a>.</p>
 
 <p>If you're running something else, it's probably easy to get the needed libraries and get running. For example, Ubuntu 12.04 comes with python 2.7 by default, so <code>sudo apt-get install python-numpy python-imaging python-imaging-tk</code> will install the necessary libraries. After that, `<code>iii.py</code> -- available <a href="https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master">here</a> -- can be run on the command line with <code>python iii.py</code></p>
 
 <p>I understand a future version of Ubuntu will move to python 3, so you may need to add some '2.7's in there. E.g. <code>sudo apt-get install python2.7 python2.7-numpy python2.7-imaging python2.7-imaging-tk</code> then run it with <code>python2.7 iii.py</code>.</p>
 
-<h2>Interface</h2>
+<h2>
+<a name="interface" class="anchor" href="#interface"><span class="octicon octicon-link"></span></a>Interface</h2>
 
 <p>The interface shows a TMz wave with five plots. The two large plots show Ez (upper plot) and EzRMS (lower plot) throughout the simulation's domain. For both, black is the smallest value and white is the largest value, with shades of gray in between. The three smaller plots show Ez and +/-sqrt(2)*EzRMS -- an envelope for Ez -- along the horizontal and vertical dashed lines through the two larger plots. Those lines can be moved with the keyboard or mouse, and x, y, Ez, and EzRMS at those lines' intersection is displayed in the center right area between the two vertical plots. Knowing EzRMS at that point allows users to home in on extrema.</p>
 
@@ -74,15 +80,18 @@
 
 <p>The laboratory's computers -- running Windows with Intel Core 2 Duo processors -- take about 55ms per simulation timestep, resulting in a smooth animation.</p>
 
-<h2>Instructional Laboratory</h2>
+<h2>
+<a name="instructional-laboratory" class="anchor" href="#instructional-laboratory"><span class="octicon octicon-link"></span></a>Instructional Laboratory</h2>
 
 <p>For an example of a lab that uses this simulation, see the <a href="https://github.com/lnmaurer/Interference-Diffraction-Worksheet">worksheet</a> I used.</p>
 
-<h2>Code</h2>
+<h2>
+<a name="code" class="anchor" href="#code"><span class="octicon octicon-link"></span></a>Code</h2>
 
 <p>The software is written in Python using NumPy for the calculations, TkInter for the interface, and the Python Imaging Library to produce the 2D plots. Those libraries are available for Windows, OS X, and Linux.</p>
 
-<h2>Notes</h2>
+<h2>
+<a name="notes" class="anchor" href="#notes"><span class="octicon octicon-link"></span></a>Notes</h2>
 
 <ul>
 <li> This code works with Python 2.7; I'll probably make it compatible with Python 3 eventually -- once all the libraries have Python 3 versions.</li>
@@ -95,11 +104,13 @@
 <li> <a href="http://www.pythonware.com/products/pil/">Python Imaging Library</a>. The only available downloads on that page are for Windows, but it as available on other platforms through other means. For example, on Mac OS X, it's available through package managers like pip and MacPorts.</li>
 </ul>
 </li>
-</ul><h2>Contact</h2>
+</ul><h2>
+<a name="contact" class="anchor" href="#contact"><span class="octicon octicon-link"></span></a>Contact</h2>
 
-<p>If you have any questions, don't hesitate to contact me (<a href="https://github.com/lnmaurer" class="user-mention">@lnmaurer</a>). For more information about me, see my <a href="https://mywebspace.wisc.edu/lnmaurer/web/">webpage</a></p>
+<p>If you have any questions, don't hesitate to contact me (<a href="https://github.com/lnmaurer" class="user-mention">@lnmaurer</a>). For more information about me, see my <a href="http://www.physics.wisc.edu/%7Elmaurer/">webpage</a></p>
 
-<h2>The code is available under the <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU Public License Version 2</a>
+<h2>
+<a name="the-code-is-available-under-the-gnu-public-license-version-2" class="anchor" href="#the-code-is-available-under-the-gnu-public-license-version-2"><span class="octicon octicon-link"></span></a>The code is available under the <a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU Public License Version 2</a>
 </h2>
 
 <p>This program is free software; you can redistribute it and/or
