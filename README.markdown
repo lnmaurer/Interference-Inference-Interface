@@ -1,6 +1,6 @@
 # Interference Inference Interface
-![The graphical user interface.](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
-[Full-sized image](https://mywebspace.wisc.edu/lnmaurer/web/iii/double_slit.png)
+![The graphical user interface.](http://www.physics.wisc.edu/~lmaurer/code/iii/double_slit.png)
+[Full-sized image](http://www.physics.wisc.edu/~lmaurer/code/iii/double_slit.png)
 
 This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teaching in an instructional lab.
 
@@ -9,17 +9,17 @@ This is a simple 2D FDTD simulation of an electromagnetic TMz wave made for teac
 ## Downloads
 
 ### Windows
-[Here](https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.exe)'s a Window executable. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
+[Here](http://www.physics.wisc.edu/~lmaurer/code/iii/iii.exe)'s a Window executable. Just double click it to run. Note that the executable makes a folder when it's run; it'll be deleted when if the program exits normally. If it doesn't exit normally, feel free to delete the folder and the stuff in it.
 
 ### OS X
-[Here](https://mywebspace.wisc.edu/lnmaurer/web/iii/iii.zip)'s an OS X executable in a zip file. Unzip it and then double click it to run.
+[Here](http://www.physics.wisc.edu/~lmaurer/code/iii/iii.zip)'s an OS X executable in a zip file. Unzip it and then double click it to run.
 
 Unfortunately, a known and apparently unfixable [bug](http://mail.python.org/pipermail/tkinter-discuss/2013-January/003343.html) in the interface library can make the interface unresponsive when the simulation is running on OS X. This code is using a workaround that seems to be effective, but it's possible you'll run in to problems. If so, don't hesitate to contact me.
 
 Even with this workaround, the simulation runs more slowly -- making the animation more coppy -- on OS X.
 
 ### Linux
-I've made a Debian package -- tested under Ubuntu 12.10 -- available [here](https://mywebspace.wisc.edu/lnmaurer/web/iii/interference-inference-interface-69.deb).
+I've made a Debian package -- tested under Ubuntu 12.10 -- available [here](http://www.physics.wisc.edu/~lmaurer/code/iii/interference-inference-interface-69.deb).
 
 If you're running something else, it's probably easy to get the needed libraries and get running. For example, Ubuntu 12.04 comes with python 2.7 by default, so ``sudo apt-get install python-numpy python-imaging python-imaging-tk`` will install the necessary libraries. After that, ```iii.py`` -- available [here](https://github.com/lnmaurer/Interference-Inference-Interface/zipball/master) -- can be run on the command line with ``python iii.py``
 
@@ -58,7 +58,7 @@ The software is written in Python using NumPy for the calculations, TkInter for 
 
 ## Contact
 
-If you have any questions, don't hesitate to contact me (@lnmaurer). For more information about me, see my [webpage](https://mywebspace.wisc.edu/lnmaurer/web/)
+If you have any questions, don't hesitate to contact me (@lnmaurer). For more information about me, see my [webpage](http://www.physics.wisc.edu/~lmaurer/)
 
 ## The code is available under the [GNU Public License Version 2](http://www.gnu.org/licenses/gpl-2.0.html)
 
