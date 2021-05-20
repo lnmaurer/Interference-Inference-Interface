@@ -354,13 +354,9 @@ def invertedGaps():
 def updateEzPlot():
   """Makes a plot of Ez and stores it in ezPlot"""
   global ezPlot
-  #notes:
-  #1)Image.frombytes can only handle 32bit floats, so need to do that conversion
-  #2)0 (and below) are black, 255 and above are white, shades of gray inbetween
-  #3)need to store array in (height, width) format
-  data = float32((transpose(EzVis[:,:])/maxEz + 1)/2*256) #+1 so that zero is in the center
-  # TODO: use fromarray instead?
-  im = Image.frombytes('F', (data.shape[1], data.shape[0]), data.tobytes())
+  #0 (and below) are black, 255 and above are white, shades of gray inbetween
+  data = (transpose(EzVis[:,:])/maxEz + 1)/2*256 #+1 so that zero is in the center
+  im = Image.fromarray(data)
   ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
 def updateEzRMSPlot():
@@ -368,11 +364,10 @@ def updateEzRMSPlot():
   global ezRMSPlot
 
   if avgSetting.get() == 'sq': #want to display Ez_RMS^2
-    data = 256*(float32(transpose(EzRMSSQ)/maxEzRMS**2))
+    data = 256*(transpose(EzRMSSQ)/maxEzRMS**2)
   else: #want to display Ez_RMS
-    data = 256*(float32(transpose(EzRMS/maxEzRMS)))
-  # TODO: use fromarray instead?
-  im = Image.frombytes('F', (data.shape[1], data.shape[0]), data.tobytes())
+    data = 256*(transpose(EzRMS/maxEzRMS))
+  im = Image.fromarray(data)
   ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
 
 def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
