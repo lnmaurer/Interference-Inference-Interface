@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 
 import tkinter, tkinter.filedialog, tkinter.ttk, tkinter.messagebox
-import csv #for exporting in CSV
-import time #for testing how long steps take
-from numpy import * #so that we don't have to have 'numpy.'s everywhere
-from numpy import round, max #so that we can use numpy.round and numpy.max, which otherwise conflicts with python's built functions
+import csv
+import time
+from numpy import *
+from numpy import round, max
 from PIL import Image, ImageTk, ImageDraw
 
 #NOTES
@@ -28,15 +28,19 @@ c        = 1/(mu0*epsilon0)**0.5
 canvasX = 600 #width of view canvas
 canvasY = 300 #height of view canvas
 barrierX = 100	#x position of the barrier
-pmlWidth = 16 #width of the perfectly matched layer, not including the PEC boundary
+#width of the perfectly matched layer, not including the PEC boundary
+pmlWidth = 16
 
-Nx = canvasX - barrierX + pmlWidth + 1	#width of the FDTD domain; overlaps anayltic domain by one and has PML + PEC on right side
-Ny = canvasY + 2*pmlWidth + 2		#height of the FDTD domain; has PML and PEC on top and bottom
+#width of the FDTD domain; overlaps anayltic domain by one and has PML + PEC on right side
+Nx = canvasX - barrierX + pmlWidth + 1
+#height of the FDTD domain; has PML and PEC on top and bottom
+Ny = canvasY + 2*pmlWidth + 2
 
 plotD = 100	#free dimension of 1D plots
 
 d  = 2.0/(canvasX-1)	#spatial grid element size
-dt = d/c/2**0.5	#time step -- this choice is good for a 2D simulation in vacuum, will modify shortly
+#time step -- this choice is good for a 2D simulation in vacuum, will modify shortly
+dt = d/c/2**0.5
 
 #the wave:
 lamb  = 20*d		#wavelength -- 20 points per wavelength yeilds good results
@@ -44,17 +48,23 @@ k     = 2*pi/lamb	#wavenumber
 omega = 2*pi*c/lamb	#angular frequency
 tau   = lamb/c		#time period
 
-dt = tau/ceil(tau/dt) #now, modify dt so that tau is an integer number of timesteps; this formulation makes dt less than or equal to its previous value, which is nescessary for stability
+#now, modify dt so that tau is an integer number of timesteps; this formulation makes dt less than or equal to its previous value, which is nescessary for stability
+dt = tau/ceil(tau/dt)
 
-#stability time step counts
-nStable = int((barrierX + sqrt((canvasX-barrierX)**2 + canvasY**2))*d/c/dt) #time steps until Ez beocmes stable: to barrier then longest way across right domain
-nAvgStable = int(round(tau/dt)) #average for one cycle (once Ez is already stable)
+#time steps until Ez beocmes stable: to barrier then longest way across right domain
+nStable = int((barrierX + sqrt((canvasX-barrierX)**2 + canvasY**2))*d/c/dt)
+#average for one cycle (once Ez is already stable)
+nAvgStable = int(round(tau/dt))
 
-NEZx = Nx #number of Ez grid points in x direction -- goes all the way to the edge
-NEZy = Ny #number of Ez grid points in y direction -- goes all the way to the edge
+#number of Ez grid points in x direction -- goes all the way to the edge
+NEZx = Nx
+#number of Ez grid points in y direction -- goes all the way to the edge
+NEZy = Ny
 #range updated by Yee algorithm:
-EZx_range = slice(1, NEZx-1) #right and left are PECs, so not updated using Yee algorithm
-EZy_range = slice(1, NEZy-1) #top and bottom are PECs, so not updated using Yee algorithm
+#right and left are PECs, so not updated using Yee algorithm
+EZx_range = slice(1, NEZx-1)
+#top and bottom are PECs, so not updated using Yee algorithm
+EZy_range = slice(1, NEZy-1)
 #range that's visible
 EZx_vis_range = slice(0, -(pmlWidth+1))
 EZy_vis_range = slice((pmlWidth+1), -(pmlWidth+1))
@@ -83,23 +93,29 @@ wd   = pmlWidth*d
 sigmaMax   = -(m+1)*log(ref)/2/eta/wd
 sigmaStMax = mu0/epsilon0*sigmaMax
 
-sigmas   = sigmaMax*((arange(pmlWidth) + 0.0)/(pmlWidth))**m	#sigmas for non-PEC part of PML
-sigmaSts = sigmaStMax*((arange(pmlWidth) + 0.5)/(pmlWidth))**m	#'sigma*' for the same
+#sigmas for non-PEC part of PML
+sigmas   = sigmaMax*((arange(pmlWidth) + 0.0)/(pmlWidth))**m
+#'sigma*' for the same
+sigmaSts = sigmaStMax*((arange(pmlWidth) + 0.5)/(pmlWidth))**m
 
 #conductivities
 sigmaStX = zeros((NHYx,NHYy)) #used to update Hy
 sigmaStX[-pmlWidth:,:] = sigmaSts[:, newaxis] #just need it on the right side
 
 sigmaStY = zeros((NHXx,NHXy)) #used to update Hx
-sigmaStY[:,:pmlWidth] = sigmaSts[::-1] #reverse order of 'sigma*'s so that largest is at bottom
+#reverse order of 'sigma*'s so that largest is at bottom
+sigmaStY[:,:pmlWidth] = sigmaSts[::-1]
 sigmaStY[:,-pmlWidth:] = sigmaSts
 
-sigmaX = zeros((NEZx-2,NEZy-2)) #used to update Ezx in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+#used to update Ezx in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+sigmaX = zeros((NEZx-2,NEZy-2))
 sigmaX[-pmlWidth:] = sigmas[:, newaxis]
 
-sigmaY = zeros((NEZx-2,NEZy-2)) #used to update Ezy in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+#used to update Ezy in EZx_range and EZy_range, so -2 since we don't update PEC barriers
+sigmaY = zeros((NEZx-2,NEZy-2))
 sigmaY[:,-pmlWidth:] = sigmas
-sigmaY[:,:pmlWidth] = sigmas[::-1] #reverse order of sigmas so that largest is at bottom
+#reverse order of sigmas so that largest is at bottom
+sigmaY[:,:pmlWidth] = sigmas[::-1]
 
 #Yee algorithm update coefficients
 CaX = (1-sigmaX*dt/2/epsilon0)/(1+sigmaX*dt/2/epsilon0)
@@ -116,11 +132,13 @@ DbY = dt/mu0/d/(1+sigmaStY*dt/2/mu0)
 #time steps
 n          = 0 #the current time step
 nAveraging = 0 #number of time steps average has been running
-nCount     = nStable #nCount stores the time step we're counting to, when stability will be reached
+nCount     = nStable # Time step we're counting to, when stability will be reached
 
 #booleans
-running        = False #stores whether or not the simulation is currently running
-fastForwarding = False #stores whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
+# Whether or not the simulation is currently running
+running        = False
+# Whether or not the simulation is in fast forward mode (where it saves time by not updating the plots)
+fastForwarding = False
 
 #numpy arrays
 #for FDTD domain
@@ -130,7 +148,8 @@ Ezy      = zeros((NEZx, NEZy))
 Hx       = zeros((NHXx, NHXy))
 Hy       = zeros((NHYx, NHYy))
 #for whole visible domain
-EzSQsum = zeros((canvasX, canvasY)) #sum of 'Ez^2's at each timestep we've averaged over
+#sum of 'Ez^2's at each timestep we've averaged over
+EzSQsum = zeros((canvasX, canvasY))
 EzRMSSQ = zeros((canvasX, canvasY)) #Ez_RMS^2
 EzRMS   = zeros((canvasX, canvasY)) #Ez_RMS
 #for the anayltic domain
@@ -139,8 +158,9 @@ EzAn	= zeros((barrierX+1, canvasY))
 EzVis = zeros((canvasX,canvasY))
 
 #largest array elements
-maxEz    = 1 #contains the largest Ez seen >=1
-maxEzRMS = 1 #contains the largest Ez_RMS seen -- start it at one to avoid divide by zero problems on the first canvas refresh
+maxEz    = 1 # largest Ez seen >=1
+# largest Ez_RMS seen -- start it at one to avoid divide by zero problems on the first canvas refresh
+maxEzRMS = 1
 
 
 #THE METHODS-------------------------------------------------------------------
@@ -157,7 +177,8 @@ def exportData():
     for i, gap in enumerate(gaps):
       writer.writerow(("Opening {}:".format(i),gap[0],gap[1]))
 
-    writer.writerow(('Ez','')) #need the '' or else it will split up 'Ez_RMS^2'???
+    #need the '' or else it will split up 'Ez_RMS^2'???
+    writer.writerow(('Ez',''))
     row = ['x\\y']
     row.extend(range(0,canvasY))
     writer.writerow(row)
@@ -166,7 +187,8 @@ def exportData():
       row.extend(r)
       writer.writerow(row)
 
-    writer.writerow(('Ez_RMS^2','')) #need the '' or else it will split up 'Ez_RMS^2'???
+    #need the '' or else it will split up 'Ez_RMS^2'???
+    writer.writerow(('Ez_RMS^2',''))
     row = ['x\\y']
     row.extend(range(0,canvasY))
     writer.writerow(row)
@@ -182,7 +204,8 @@ def barrierChanged():
 
   maxEz = 1
   nCount = n + nStable
-  root.focus() #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
+  #removes focus from whatever spinbox it was on, so that it doesn't steal arrow key presses and the likes
+  root.focus()
   conditionalRedraw()
 
 def addOpening():
@@ -191,13 +214,15 @@ def addOpening():
 
   bot = int(bottomEntry.get())	#top of proposed opening
   top = int(topEntry.get())	#bottom of proposed opening
-  if bot > 0 and top < canvasY and bot < top: #some initial checks that top and bot better pass
+  if bot > 0 and top < canvasY and bot < top:
     newOrder = gaps[:] #copy gaps, don't just point to it
     newOrder.append([bot,top])
     newOrder.sort() #sorts by first entry of each pair (the bottom)
     newOrderFlat = [ypos for pair in newOrder for ypos in pair] #flatten
-    if (newOrderFlat == sorted(newOrderFlat) #catches things like [50,100],[90,120] -- overlapping openings
-      and len(list(set(newOrderFlat))) == len(newOrderFlat)): #catchs things like [50,100],[100,120] -- openings with no space between them
+    #catches things like [50,100],[90,120] -- overlapping openings
+    if (newOrderFlat == sorted(newOrderFlat)
+      and len(list(set(newOrderFlat))) == len(newOrderFlat)):
+      #catchs things like [50,100],[100,120] -- openings with no space between them
       gaps = newOrder
       redrawBarrierFrame()
       barrierChanged()
@@ -214,10 +239,10 @@ def redrawBarrierFrame():
   for f in barrierFrames:
     f.destroy() #get rid of old frames
   barrierFrames = []
-  updateButtons = [] #holds the buttons for updating the openings
-  spinboxes     = [] #holds the spinboxes for entering the top and bottom positions of the openings
-  intVars       = [] #need to save StringVars or else they get garbage collected
-  distStrVars   = [] #holds stringVars that report the distance from the center of the gaps to the slice intersection
+  updateButtons = [] # buttons for updating the openings
+  spinboxes     = [] # spinboxes for entering the top and bottom positions of the openings
+  intVars       = [] # need to save StringVars or else they get garbage collected
+  distStrVars   = [] # stringVars that report the distance from the center of the gaps to the slice intersection
   r = 3 #rows 0,1,2 already taken by widgets for adding an opeing
 
   for gap in gaps:
@@ -357,7 +382,7 @@ def updateEzPlot():
   #0 (and below) are black, 255 and above are white, shades of gray inbetween
   data = (transpose(EzVis[:,:])/maxEz + 1)/2*256 #+1 so that zero is in the center
   im = Image.fromarray(data)
-  ezPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
+  ezPlot = ImageTk.PhotoImage(image=im) # assign to avoid garbage collection
 
 def updateEzRMSPlot():
   """Makes a plot of Ez_RMS or Ez_RMS^2 (whichever is selected by the user) and stores it in ezRMSPlot"""
@@ -368,7 +393,7 @@ def updateEzRMSPlot():
   else: #want to display Ez_RMS
     data = 256*(transpose(EzRMS/maxEzRMS))
   im = Image.fromarray(data)
-  ezRMSPlot = ImageTk.PhotoImage(image=im) #need to store it so it doesn't get garbage collected, otherwise it won't display correctly on the canvas
+  ezRMSPlot = ImageTk.PhotoImage(image=im) # assign to avoid garbage collection
 
 def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
   """Stores the appropriate x or y values for the small canvas for the given x and y slices for the averaged traces (amplitude, Ez_RMS, or Ez_RMS^2).
@@ -378,23 +403,31 @@ def makeAvgedTrace(xS, yS, invert=False, othercoord=None):
   and the y values are similiarly stored like [V0,...,Vn,-Vn,...,-V0], so that we plot +/- of the value"""
   if avgSetting.get() == 'amp': #want to display amplitude = EzRMS*sqrt(2) with zero in middle of plot
     v = int_(round((1+(EzRMS[xS,yS]*sqrt(2))/maxEz)*(plotD/2)))
-    if othercoord != None: #in this case, let's plot +/-amplitude, not just amplitude
-      list(othercoord).extend(othercoord[::-1]) #extend the coordinates so they're like [0,1...,canvasX-1,canvasX,canvasX,canvasX-1,...,1,0]
-      v = concatenate((v,plotD-v[::-1])) #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
-  elif avgSetting.get() == 'rms': #want to display EzRMS with zero at bottom of plot
+    if othercoord != None:
+        #in this case, let's plot +/-amplitude, not just amplitude
+        #extend the coordinates so they're like [0,1...,canvasX-1,canvasX,canvasX,canvasX-1,...,1,0]
+      list(othercoord).extend(othercoord[::-1])
+      #extend the values so they're like [V0,...,Vn,-Vn,...,-V0]
+      v = concatenate((v,plotD-v[::-1]))
+  elif avgSetting.get() == 'rms':
+    #want to display EzRMS with zero at bottom of plot
     v = int_(round((EzRMS[xS,yS]/maxEzRMS)*(plotD-1)))
-  else: #want to display EzRMS^2 with zero at bottom of plot
+  else:
+    #want to display EzRMS^2 with zero at bottom of plot
     v = int_(round((EzRMSSQ[xS,yS]/maxEzRMS**2)*(plotD-1)))
 
-  if invert: #mirror results across axis
+  if invert:
+    #mirror results across axis
     v = plotD - v
   return v
 
 def plot(draw, x, y, color):
   """Plots the 1D data on the drawing in the given color"""
-  if traceSetting.get() == 'line': #line plot
+  if traceSetting.get() == 'line':
+    #line plot
     draw.line(list(zip(x,y)), fill=color)
-  else: #dot plot
+  else:
+    #dot plot
     draw.point(list(zip(x,y)), fill=color)
 
 def updateHorizPlot():
@@ -596,9 +629,11 @@ def fastForward():
   global fastForwarding
 
   fastForwarding = True
-  if nCount < n: #we've already reached stability, so now we're fast forwarding to get good averaging
+  if nCount < n:
+    # already reached stability, so now we're fast forwarding to get good averaging
     root.after(1,lambda: fastForwardStep(True))
-  else: #we're fast forwarding to get Ez stability
+  else:
+    # fast forwarding to get Ez stability
     root.after(1,lambda: fastForwardStep(False))
 
 
@@ -622,7 +657,8 @@ def fastForwardStep(fastForwardWithAvg):
     else:
       Ezcanvas.create_text(canvasX/2,canvasY/2, text=str(nCount-n), fill="Red", font=("Helvetica", "75"))
       EzRMScanvas.create_text(canvasX/2,canvasY/2, text=str(nCount-n), fill="Red", font=("Helvetica", "75"))
-    step(avg=fastForwardWithAvg) #only average if we're not going to reset right after we're done fast forwarding
+    #only average if not going to reset right after we're done fast forwarding
+    step(avg=fastForwardWithAvg)
     root.after(1,lambda: fastForwardStep(fastForwardWithAvg))
   else: #stop fast forwarding
     fastForwarding = False
@@ -636,7 +672,8 @@ def fastForwardStep(fastForwardWithAvg):
 def singleStep():
   """Avances the simulation for one step, so long as the simulation is not running or fastforwarding"""
   if (not running) and (not fastForwarding):
-    if n == nCount: #now that Ez is stable, reset the averaging so that it can reach stability
+    if n == nCount:
+      #now that Ez is stable, reset the averaging so that it can reach stability
       resetAveraging()
     step()
     redrawCanvases()
@@ -645,7 +682,8 @@ def run():
   """Runs the simulation while displaying the results at every step"""
   if running:
     timer = time.time()
-    if n == nCount: #now that Ez is stable, reset the averaging so that it can reach stability
+    if n == nCount:
+      #now that Ez is stable, reset the averaging so that it can reach stability
       resetAveraging()
     step()
     redrawCanvases()
@@ -703,11 +741,13 @@ def step(avg=True):
   #now, enforce Ez=0 on barrier
   invGaps = invertedGaps()
   for i in range(0,len(invGaps),2):
-    Ez[0, invGaps[i]+pmlWidth+1:invGaps[i+1]+pmlWidth+1] = 0 #need to add PML and PEC offset since inverted gaps works on visible coordinate system
+    #need to add PML and PEC offset since inverted gaps works on visible coordinate system
+    Ez[0, invGaps[i]+pmlWidth+1:invGaps[i+1]+pmlWidth+1] = 0
 
   #now, stitch the two together to make the visible domain
   EzVis[EZx_an_range, :] = EzAn
-  EzVis[barrierX:canvasX,:] = Ez[EZx_vis_range, EZy_vis_range] #overlaps with right edge of EzAn, so overwrites it
+  #overlaps with right edge of EzAn, so overwrites it
+  EzVis[barrierX:canvasX,:] = Ez[EZx_vis_range, EZy_vis_range]
 
   #first, only average if avg is true
   #2nd, stop averaging once we've got enough points (i.e. after nAveraging == nAvgStable)
@@ -721,7 +761,8 @@ def step(avg=True):
 
     maxEzRMS = max(EzRMS)
     if maxEzRMS == 0:
-      maxEzRMS = 1 #avoid division by zero problems
+      #avoid division by zero problems
+      maxEzRMS = 1
     seterr(invalid='raise')
   #because Ez oscillates, it's maximum will change a little in time, so we store it and update it if we find something larger
   tempMaxEz = max(abs(EzVis))
@@ -827,8 +868,7 @@ VertPlotCanvas2.grid(column=3, row=8, columnspan=1, rowspan=3, sticky='nsew', pa
 EzRMScanvas = tkinter.Canvas(viewFrame, width=canvasX, height=canvasY)
 EzRMScanvas.grid(column=0, row=8, columnspan=3, rowspan=3, sticky='nsew', padx=5, pady=5)
 
-#make it so that, after dragging an element has ceased, the binding is reset so that further dragging won't move the element unless it gets clicked again first
-#we do this by binding to any motion on any canvas
+#make it so that, after dragging an element has ceased, the binding is reset so that further dragging won't move the element unless it gets clicked again first we do this by binding to any motion on any canvas
 Ezcanvas.bind("<Motion>", clearCanvasBindings)
 HorizPlotCanvas.bind("<Motion>", clearCanvasBindings)
 EzRMScanvas.bind("<Motion>", clearCanvasBindings)
@@ -856,7 +896,8 @@ topEntry.bind("<Return>",lambda arg: root.focus()) #removes focus after the numb
 topEntry.grid(column=1, row=2, sticky='nsw', padx=5, pady=5)
 
 gaps = [[50,70],[230,250]] #good for standard double slit experiment
-barrierFrames = [] #stores the frames for each opening in the barrier; need to initialize it as an empty array
+# frames for each opening in the barrier; need to initialize it as an empty array
+barrierFrames = []
 
 #draw on the canvases and set up the barrier frame
 redrawBarrierFrame()
